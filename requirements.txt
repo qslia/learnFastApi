@@ -1,0 +1,20 @@
+# FastAPI and server
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# Data validation
+pydantic[email]==2.10.4
+
+# Templates
+jinja2==3.1.4
+
+# File handling
+python-multipart==0.0.18
+
+# HTTP client (for testing)
+httpx==0.28.1
+
+# Testing
+pytest==8.3.4
+pytest-asyncio==0.25.0
+
