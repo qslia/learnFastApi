@@ -196,6 +196,38 @@ sessions_db: dict[str, dict] = {}
 item_id_counter = 3
 user_id_counter = 2
 auth_user_id_counter = 2
+post_id_counter = 4
+
+# ============== Community Posts Database ==============
+posts_db: list[dict] = [
+    {
+        "id": 1,
+        "author": "demo",
+        "author_name": "Demo User",
+        "content": "Welcome to the English Speaking Practice community! 🎉 Feel free to share your learning progress, ask questions, or help others.",
+        "created_at": datetime.now() - timedelta(hours=5),
+        "likes": 12,
+        "liked_by": ["demo"],
+    },
+    {
+        "id": 2,
+        "author": "demo",
+        "author_name": "Demo User",
+        "content": "今天学了一个新句子：The weather in southwest China is very special. 西南部的天气真的很特别！",
+        "created_at": datetime.now() - timedelta(hours=2),
+        "likes": 5,
+        "liked_by": [],
+    },
+    {
+        "id": 3,
+        "author": "demo",
+        "author_name": "Demo User",
+        "content": "Does anyone have tips for remembering vocabulary? I keep forgetting new words after a few days. 😅",
+        "created_at": datetime.now() - timedelta(minutes=30),
+        "likes": 3,
+        "liked_by": [],
+    },
+]
 
 # ============== Practice Sentences Database ==============
 sentences_db: list[dict] = [
@@ -522,6 +554,103 @@ async def practice_page(request: Request):
             "user": user,
         },
     )
+
+
+@app.get("/community", response_class=HTMLResponse, tags=["Pages"])
+async def community_page(request: Request):
+    """Community posts page"""
+    user = get_current_user(request)
+    # Sort posts by created_at descending (newest first)
+    sorted_posts = sorted(posts_db, key=lambda x: x["created_at"], reverse=True)
+    return templates.TemplateResponse(
+        "community.html",
+        {
+            "request": request,
+            "title": "Community",
+            "posts": sorted_posts,
+            "user": user,
+        },
+    )
+
+
+# ============== Community API Endpoints ==============
+class PostCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=1000)
+
+
+@app.get("/api/posts", tags=["API - Community"])
+async def get_posts():
+    """Get all community posts"""
+    sorted_posts = sorted(posts_db, key=lambda x: x["created_at"], reverse=True)
+    return sorted_posts
+
+
+@app.post("/api/posts", tags=["API - Community"])
+async def create_post(request: Request, post: PostCreate):
+    """Create a new community post"""
+    global post_id_counter
+
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="You must be logged in to post")
+
+    new_post = {
+        "id": post_id_counter,
+        "author": user["username"],
+        "author_name": user["full_name"] or user["username"],
+        "content": post.content,
+        "created_at": datetime.now(),
+        "likes": 0,
+        "liked_by": [],
+    }
+    posts_db.insert(0, new_post)
+    post_id_counter += 1
+
+    return new_post
+
+
+@app.post("/api/posts/{post_id}/like", tags=["API - Community"])
+async def like_post(request: Request, post_id: int):
+    """Like or unlike a post"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(
+            status_code=401, detail="You must be logged in to like posts"
+        )
+
+    for post in posts_db:
+        if post["id"] == post_id:
+            if user["username"] in post["liked_by"]:
+                # Unlike
+                post["liked_by"].remove(user["username"])
+                post["likes"] -= 1
+                return {"liked": False, "likes": post["likes"]}
+            else:
+                # Like
+                post["liked_by"].append(user["username"])
+                post["likes"] += 1
+                return {"liked": True, "likes": post["likes"]}
+
+    raise HTTPException(status_code=404, detail="Post not found")
+
+
+@app.delete("/api/posts/{post_id}", tags=["API - Community"])
+async def delete_post(request: Request, post_id: int):
+    """Delete a post (only author can delete)"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="You must be logged in")
+
+    for i, post in enumerate(posts_db):
+        if post["id"] == post_id:
+            if post["author"] != user["username"]:
+                raise HTTPException(
+                    status_code=403, detail="You can only delete your own posts"
+                )
+            posts_db.pop(i)
+            return {"message": "Post deleted successfully"}
+
+    raise HTTPException(status_code=404, detail="Post not found")
 
 
 # ============== Image Upload Endpoints ==============
