@@ -481,40 +481,6 @@ async def home_page(request: Request, db: DBSession = Depends(get_db)):
     )
 
 
-@app.get("/gallery", response_class=HTMLResponse, tags=["Pages"])
-async def gallery_page(request: Request, db: DBSession = Depends(get_db)):
-    """Image gallery page"""
-    user = get_current_user(request, db)
-    user_dict = None
-    if user:
-        user_dict = {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "full_name": user.full_name,
-        }
-
-    # Get all uploaded images
-    upload_dir = "static/uploads"
-    images = []
-    if os.path.exists(upload_dir):
-        for filename in os.listdir(upload_dir):
-            if filename.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
-                images.append(
-                    {"filename": filename, "url": f"/static/uploads/{filename}"}
-                )
-
-    return templates.TemplateResponse(
-        "gallery.html",
-        {
-            "request": request,
-            "title": "Image Gallery",
-            "images": images,
-            "user": user_dict,
-        },
-    )
-
-
 @app.get("/items-page", response_class=HTMLResponse, tags=["Pages"])
 async def items_page(
     request: Request,
