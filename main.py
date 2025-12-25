@@ -528,17 +528,28 @@ async def practice_page(request: Request, db: DBSession = Depends(get_db)):
     user = get_current_user(request, db)
     user_dict = None
     if user:
+        tier = user.current_tier
+        limits = SUBSCRIPTION_LIMITS[tier]
         user_dict = {
             "id": user.id,
             "username": user.username,
             "email": user.email,
             "full_name": user.full_name,
+            "is_premium": user.is_premium,
+            "tier_limits": limits["daily_sentences"] if limits["daily_sentences"] > 0 else 999999,
         }
 
     # Get sentences from database
     sentences = db.query(DBSentence).order_by(DBSentence.id).all()
     sentences_list = [
-        {"id": s.id, "chinese": s.chinese, "hint": s.hint} for s in sentences
+        {
+            "id": s.id, 
+            "chinese": s.chinese, 
+            "english": s.english,
+            "hint": s.hint,
+            "category": s.category or "general",
+            "difficulty": s.difficulty or 1,
+        } for s in sentences
     ]
 
     return templates.TemplateResponse(
@@ -983,10 +994,31 @@ class SentenceCreate(BaseModel):
 
 
 @app.get("/api/sentences", tags=["API - Sentences"])
-async def get_sentences(db: DBSession = Depends(get_db)):
-    """Get all practice sentences"""
-    sentences = db.query(DBSentence).order_by(DBSentence.id).all()
-    return [{"id": s.id, "chinese": s.chinese, "hint": s.hint} for s in sentences]
+async def get_sentences(
+    category: Optional[str] = None,
+    difficulty: Optional[int] = None,
+    db: DBSession = Depends(get_db)
+):
+    """Get all practice sentences with optional filtering"""
+    query = db.query(DBSentence)
+    
+    if category:
+        query = query.filter(DBSentence.category == category)
+    if difficulty:
+        query = query.filter(DBSentence.difficulty == difficulty)
+    
+    sentences = query.order_by(DBSentence.id).all()
+    return [
+        {
+            "id": s.id, 
+            "chinese": s.chinese, 
+            "english": s.english,
+            "hint": s.hint,
+            "category": s.category or "general",
+            "difficulty": s.difficulty or 1,
+        } 
+        for s in sentences
+    ]
 
 
 @app.post("/api/sentences", tags=["API - Sentences"])
@@ -1032,6 +1064,8 @@ async def delete_sentence(sentence_id: int, db: DBSession = Depends(get_db)):
 # ============== Practice Statistics API Endpoints ==============
 class PracticeRecordCreate(BaseModel):
     sentence_id: int
+    user_answer: str = ""
+    is_correct: bool = False
 
 
 @app.post("/api/practice/record", tags=["API - Practice Stats"])
@@ -1040,7 +1074,7 @@ async def record_practice(
     request: Request,
     db: DBSession = Depends(get_db),
 ):
-    """Record that a user practiced a sentence today"""
+    """Record that a user practiced a sentence today with their answer"""
     user = get_current_user(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="You must be logged in to track practice")
@@ -1052,74 +1086,110 @@ async def record_practice(
     limits = SUBSCRIPTION_LIMITS[tier]
     daily_limit = limits["daily_sentences"]
     
+    # Count unique sentences practiced today
+    today_count = db.query(DBPracticeRecord).filter(
+        DBPracticeRecord.user_id == user.id,
+        DBPracticeRecord.practice_date == today,
+    ).count()
+    
     if daily_limit > 0:  # -1 means unlimited
-        today_count = db.query(DBPracticeRecord).filter(
-            DBPracticeRecord.user_id == user.id,
-            DBPracticeRecord.practice_date == today,
-        ).count()
-        
         if today_count >= daily_limit:
             raise HTTPException(
-                status_code=403, 
+                status_code=429, 
                 detail={
-                    "message": f"已达到今日练习上限 ({daily_limit}句)，升级会员解锁更多！",
+                    "message": f"Daily limit reached ({daily_limit} sentences). Upgrade for more!",
                     "limit_reached": True,
                     "daily_limit": daily_limit,
                     "upgrade_url": "/pricing",
                 }
             )
     
-    # Check if already recorded today
+    # Check if already recorded today for this sentence
     existing = db.query(DBPracticeRecord).filter(
         DBPracticeRecord.user_id == user.id,
         DBPracticeRecord.sentence_id == record.sentence_id,
         DBPracticeRecord.practice_date == today,
     ).first()
     
-    if not existing:
-        # Create new practice record
-        new_record = DBPracticeRecord(
-            user_id=user.id,
-            sentence_id=record.sentence_id,
-            practice_date=today,
-            completed=True,
-        )
-        db.add(new_record)
+    if existing:
+        # Update existing record
+        existing.user_answer = record.user_answer
+        existing.practice_count = (existing.practice_count or 1) + 1
         
-        # Update or create streak
-        streak = db.query(DBDailyStreak).filter(DBDailyStreak.user_id == user.id).first()
-        if not streak:
-            streak = DBDailyStreak(user_id=user.id)
-            db.add(streak)
-        
-        # Update streak statistics
-        streak.total_sentences_practiced += 1
-        
-        # Check if this is a new day of practice
-        if streak.last_practice_date != today:
-            streak.total_practice_days += 1
-            
-            # Update streak
-            if streak.last_practice_date:
-                days_diff = (today - streak.last_practice_date).days
-                if days_diff == 1:
-                    # Consecutive day
-                    streak.current_streak += 1
-                elif days_diff > 1:
-                    # Streak broken
-                    streak.current_streak = 1
-            else:
-                streak.current_streak = 1
-            
-            # Update longest streak
-            if streak.current_streak > streak.longest_streak:
-                streak.longest_streak = streak.current_streak
-            
-            streak.last_practice_date = today
+        # Update mastery based on correctness
+        if record.is_correct:
+            existing.mastery_level = min((existing.mastery_level or 0) + 1, 5)
+            if existing.mastery_level >= 5:
+                existing.is_mastered = True
+        else:
+            existing.mastery_level = max((existing.mastery_level or 0) - 1, 0)
         
         db.commit()
+        
+        return {
+            "message": "Practice updated",
+            "date": str(today),
+            "today_count": today_count,
+            "total_practiced": db.query(DBDailyStreak).filter(
+                DBDailyStreak.user_id == user.id
+            ).first().total_sentences_practiced if db.query(DBDailyStreak).filter(
+                DBDailyStreak.user_id == user.id
+            ).first() else 0,
+            "mastery_level": existing.mastery_level,
+        }
     
-    return {"message": "Practice recorded", "date": str(today)}
+    # Create new practice record
+    new_record = DBPracticeRecord(
+        user_id=user.id,
+        sentence_id=record.sentence_id,
+        user_answer=record.user_answer,
+        practice_date=today,
+        practice_count=1,
+        mastery_level=1 if record.is_correct else 0,
+        is_mastered=False,
+    )
+    db.add(new_record)
+    
+    # Update or create streak
+    streak = db.query(DBDailyStreak).filter(DBDailyStreak.user_id == user.id).first()
+    if not streak:
+        streak = DBDailyStreak(user_id=user.id)
+        db.add(streak)
+    
+    # Update streak statistics
+    streak.total_sentences_practiced += 1
+    
+    # Check if this is a new day of practice
+    if streak.last_practice_date != today:
+        streak.total_practice_days += 1
+        
+        # Update streak
+        if streak.last_practice_date:
+            days_diff = (today - streak.last_practice_date).days
+            if days_diff == 1:
+                # Consecutive day
+                streak.current_streak += 1
+            elif days_diff > 1:
+                # Streak broken
+                streak.current_streak = 1
+        else:
+            streak.current_streak = 1
+        
+        # Update longest streak
+        if streak.current_streak > streak.longest_streak:
+            streak.longest_streak = streak.current_streak
+        
+        streak.last_practice_date = today
+    
+    db.commit()
+    
+    return {
+        "message": "Practice recorded",
+        "date": str(today),
+        "today_count": today_count + 1,
+        "total_practiced": streak.total_sentences_practiced,
+        "mastery_level": new_record.mastery_level,
+    }
 
 
 @app.get("/api/practice/stats", tags=["API - Practice Stats"])
@@ -1150,8 +1220,19 @@ async def get_practice_stats(
     ).all()
     today_sentence_ids = [r[0] for r in today_practiced]
     
+    # Get mastered count
+    mastered_count = db.query(DBPracticeRecord).filter(
+        DBPracticeRecord.user_id == user.id,
+        DBPracticeRecord.is_mastered == True,
+    ).count()
+    
     # Get total sentences
     total_sentences = db.query(DBSentence).count()
+    
+    # Get daily limit
+    tier = user.current_tier
+    limits = SUBSCRIPTION_LIMITS[tier]
+    daily_limit = limits["daily_sentences"]
     
     # Get practice history for last 7 days
     from datetime import timedelta
@@ -1170,13 +1251,16 @@ async def get_practice_stats(
     
     return {
         "today_date": str(today),
-        "today_practiced": today_count,
+        "today_count": today_count,
         "today_sentence_ids": today_sentence_ids,
         "total_sentences": total_sentences,
         "current_streak": streak.current_streak if streak else 0,
         "longest_streak": streak.longest_streak if streak else 0,
         "total_practice_days": streak.total_practice_days if streak else 0,
         "total_sentences_practiced": streak.total_sentences_practiced if streak else 0,
+        "mastered_count": mastered_count,
+        "daily_limit": daily_limit if daily_limit > 0 else -1,
+        "is_premium": user.is_premium,
         "last_7_days": history,
     }
 
@@ -1184,38 +1268,38 @@ async def get_practice_stats(
 @app.get("/api/practice/history", tags=["API - Practice Stats"])
 async def get_practice_history(
     request: Request,
-    days: int = Query(30, ge=1, le=365),
+    limit: int = Query(10, ge=1, le=100),
     db: DBSession = Depends(get_db),
 ):
-    """Get user's practice history for specified number of days"""
+    """Get user's recent practice history with sentence details"""
     user = get_current_user(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="You must be logged in to view history")
 
-    today = date.today()
-    from datetime import timedelta
-    start_date = today - timedelta(days=days-1)
-    
-    # Get all practice records in date range
+    # Get recent practice records with sentence details
     records = db.query(DBPracticeRecord).filter(
         DBPracticeRecord.user_id == user.id,
-        DBPracticeRecord.practice_date >= start_date,
-    ).all()
+    ).order_by(DBPracticeRecord.updated_at.desc()).limit(limit).all()
     
-    # Group by date
-    history = {}
+    # Build response with sentence info
+    history = []
     for record in records:
-        date_str = str(record.practice_date)
-        if date_str not in history:
-            history[date_str] = {"date": date_str, "count": 0, "sentence_ids": []}
-        history[date_str]["count"] += 1
-        history[date_str]["sentence_ids"].append(record.sentence_id)
+        sentence = db.query(DBSentence).filter(DBSentence.id == record.sentence_id).first()
+        history.append({
+            "id": record.id,
+            "sentence_id": record.sentence_id,
+            "chinese": sentence.chinese if sentence else "Unknown",
+            "english": sentence.english if sentence else "",
+            "user_answer": record.user_answer,
+            "mastery_level": record.mastery_level or 0,
+            "is_mastered": record.is_mastered or False,
+            "is_bookmarked": record.is_bookmarked or False,
+            "practice_count": record.practice_count or 1,
+            "practice_date": str(record.practice_date),
+            "updated_at": record.updated_at.isoformat() if record.updated_at else None,
+        })
     
-    return {
-        "start_date": str(start_date),
-        "end_date": str(today),
-        "history": list(history.values()),
-    }
+    return history
 
 
 # ============== Stats Endpoint ==============

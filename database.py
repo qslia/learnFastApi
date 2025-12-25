@@ -226,29 +226,43 @@ class Sentence(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     chinese = Column(Text, nullable=False)
+    english = Column(Text, nullable=True)  # Reference English translation
     hint = Column(Text, nullable=True)
+    difficulty = Column(Integer, default=1)  # 1=easy, 2=medium, 3=hard
+    category = Column(String(50), default="general")  # weather, travel, business, etc.
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class PracticeRecord(Base):
-    """Track user practice statistics by date"""
+    """Track user practice with detailed history"""
 
     __tablename__ = "practice_records"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     sentence_id = Column(Integer, ForeignKey("sentences.id"), nullable=False)
+    
+    # User's answer
+    user_answer = Column(Text, nullable=True)
+    
+    # Practice tracking
     practice_date = Column(Date, default=date.today, index=True)
-    completed = Column(Boolean, default=True)
+    practice_count = Column(Integer, default=1)  # Times practiced this sentence
+    
+    # Mastery tracking (for spaced repetition)
+    mastery_level = Column(Integer, default=0)  # 0-5, higher = better mastery
+    next_review_date = Column(Date, nullable=True)  # When to review again
+    
+    # Status
+    is_mastered = Column(Boolean, default=False)
+    is_bookmarked = Column(Boolean, default=False)  # User saved for later
+    
     created_at = Column(DateTime, default=datetime.utcnow)
-
-    # Unique constraint: one record per user per sentence per day
-    __table_args__ = (
-        UniqueConstraint('user_id', 'sentence_id', 'practice_date', name='unique_daily_practice'),
-    )
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     user = relationship("User", backref="practice_records")
+    sentence = relationship("Sentence", backref="practice_records")
 
 
 class DailyStreak(Base):
@@ -304,26 +318,74 @@ def migrate_database():
     from sqlalchemy import text, inspect
     
     inspector = inspect(engine)
+    tables = inspector.get_table_names()
     
-    # Check if users table exists and has the new columns
-    if 'users' in inspector.get_table_names():
-        columns = [col['name'] for col in inspector.get_columns('users')]
-        
-        with engine.connect() as conn:
-            # Add subscription columns if they don't exist
+    with engine.connect() as conn:
+        # Migrate users table
+        if 'users' in tables:
+            columns = [col['name'] for col in inspector.get_columns('users')]
+            
             if 'subscription_tier' not in columns:
-                print("📦 Adding subscription_tier column...")
+                print("📦 Adding subscription_tier column to users...")
                 conn.execute(text("ALTER TABLE users ADD COLUMN subscription_tier VARCHAR(20) DEFAULT 'free'"))
             
             if 'subscription_expires_at' not in columns:
-                print("📦 Adding subscription_expires_at column...")
+                print("📦 Adding subscription_expires_at column to users...")
                 conn.execute(text("ALTER TABLE users ADD COLUMN subscription_expires_at TIMESTAMP"))
             
             if 'lifetime_member' not in columns:
-                print("📦 Adding lifetime_member column...")
+                print("📦 Adding lifetime_member column to users...")
                 conn.execute(text("ALTER TABLE users ADD COLUMN lifetime_member BOOLEAN DEFAULT FALSE"))
+        
+        # Migrate sentences table
+        if 'sentences' in tables:
+            columns = [col['name'] for col in inspector.get_columns('sentences')]
             
-            conn.commit()
+            if 'english' not in columns:
+                print("📦 Adding english column to sentences...")
+                conn.execute(text("ALTER TABLE sentences ADD COLUMN english TEXT"))
+            
+            if 'difficulty' not in columns:
+                print("📦 Adding difficulty column to sentences...")
+                conn.execute(text("ALTER TABLE sentences ADD COLUMN difficulty INTEGER DEFAULT 1"))
+            
+            if 'category' not in columns:
+                print("📦 Adding category column to sentences...")
+                conn.execute(text("ALTER TABLE sentences ADD COLUMN category VARCHAR(50) DEFAULT 'general'"))
+        
+        # Migrate practice_records table
+        if 'practice_records' in tables:
+            columns = [col['name'] for col in inspector.get_columns('practice_records')]
+            
+            if 'user_answer' not in columns:
+                print("📦 Adding user_answer column to practice_records...")
+                conn.execute(text("ALTER TABLE practice_records ADD COLUMN user_answer TEXT"))
+            
+            if 'practice_count' not in columns:
+                print("📦 Adding practice_count column to practice_records...")
+                conn.execute(text("ALTER TABLE practice_records ADD COLUMN practice_count INTEGER DEFAULT 1"))
+            
+            if 'mastery_level' not in columns:
+                print("📦 Adding mastery_level column to practice_records...")
+                conn.execute(text("ALTER TABLE practice_records ADD COLUMN mastery_level INTEGER DEFAULT 0"))
+            
+            if 'next_review_date' not in columns:
+                print("📦 Adding next_review_date column to practice_records...")
+                conn.execute(text("ALTER TABLE practice_records ADD COLUMN next_review_date DATE"))
+            
+            if 'is_mastered' not in columns:
+                print("📦 Adding is_mastered column to practice_records...")
+                conn.execute(text("ALTER TABLE practice_records ADD COLUMN is_mastered BOOLEAN DEFAULT FALSE"))
+            
+            if 'is_bookmarked' not in columns:
+                print("📦 Adding is_bookmarked column to practice_records...")
+                conn.execute(text("ALTER TABLE practice_records ADD COLUMN is_bookmarked BOOLEAN DEFAULT FALSE"))
+            
+            if 'updated_at' not in columns:
+                print("📦 Adding updated_at column to practice_records...")
+                conn.execute(text("ALTER TABLE practice_records ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"))
+        
+        conn.commit()
     
     print("✅ Database migration check completed!")
 
@@ -394,47 +456,143 @@ def init_demo_data(db):
         ]
         db.add_all(posts)
 
-        # Create demo sentences
+        # Create demo sentences with categories and difficulty levels
         sentences = [
+            # Weather - Easy
             Sentence(
-                id=141,
                 chinese="中国西南部的天气很特别。",
+                english="The weather in southwest China is very special.",
                 hint="The weather in... is very special/unique.",
+                category="weather", difficulty=1
             ),
             Sentence(
-                id=142,
                 chinese="春天和秋天是最好的季节。",
+                english="Spring and autumn are the best seasons.",
                 hint="Spring and autumn are...",
+                category="weather", difficulty=1
             ),
             Sentence(
-                id=143,
+                chinese="今天天气怎么样？",
+                english="How is the weather today?",
+                hint="How is... today?",
+                category="weather", difficulty=1
+            ),
+            # Weather - Medium
+            Sentence(
                 chinese="中国中部和东部的天气大不相同。",
+                english="The weather in central and eastern China is very different.",
                 hint="The weather in... is very different from...",
+                category="weather", difficulty=2
             ),
             Sentence(
-                id=144,
-                chinese="暑假里我想和朋友们去旅行。",
-                hint="During summer vacation, I want to... with my friends.",
-            ),
-            Sentence(
-                id=145,
-                chinese="在秋天野餐是令人愉快的。",
-                hint="Having a picnic in autumn is...",
-            ),
-            Sentence(
-                id=146,
-                chinese="人们在这个季节喜欢参加什么活动?",
-                hint="What activities do people like to... in this season?",
-            ),
-            Sentence(
-                id=147,
                 chinese="在六月，这儿经常下大雨。",
+                english="In June, it often rains heavily here.",
                 hint="In June, it often... here.",
+                category="weather", difficulty=2
+            ),
+            # Travel - Easy
+            Sentence(
+                chinese="暑假里我想和朋友们去旅行。",
+                english="During summer vacation, I want to travel with my friends.",
+                hint="During summer vacation, I want to... with my friends.",
+                category="travel", difficulty=1
             ),
             Sentence(
-                id=148,
+                chinese="你喜欢去哪里旅游？",
+                english="Where do you like to travel?",
+                hint="Where do you like to...?",
+                category="travel", difficulty=1
+            ),
+            # Travel - Medium
+            Sentence(
+                chinese="在秋天野餐是令人愉快的。",
+                english="Having a picnic in autumn is pleasant.",
+                hint="Having a picnic in autumn is...",
+                category="travel", difficulty=2
+            ),
+            Sentence(
                 chinese="在这么热的天气里去游泳很凉爽。",
+                english="It's refreshing to go swimming in such hot weather.",
                 hint="It's refreshing/cool to... in such hot weather.",
+                category="travel", difficulty=2
+            ),
+            # Daily Life - Easy
+            Sentence(
+                chinese="你每天几点起床？",
+                english="What time do you get up every day?",
+                hint="What time do you... every day?",
+                category="daily", difficulty=1
+            ),
+            Sentence(
+                chinese="我喜欢在早上喝咖啡。",
+                english="I like to drink coffee in the morning.",
+                hint="I like to... in the morning.",
+                category="daily", difficulty=1
+            ),
+            Sentence(
+                chinese="周末你通常做什么？",
+                english="What do you usually do on weekends?",
+                hint="What do you usually... on weekends?",
+                category="daily", difficulty=1
+            ),
+            # Daily Life - Medium
+            Sentence(
+                chinese="人们在这个季节喜欢参加什么活动?",
+                english="What activities do people like to participate in during this season?",
+                hint="What activities do people like to... in this season?",
+                category="daily", difficulty=2
+            ),
+            Sentence(
+                chinese="我每天花两个小时学习英语。",
+                english="I spend two hours studying English every day.",
+                hint="I spend... hours... every day.",
+                category="daily", difficulty=2
+            ),
+            # Business - Medium
+            Sentence(
+                chinese="请问您有什么可以帮忙的吗？",
+                english="Is there anything I can help you with?",
+                hint="Is there anything I can... you with?",
+                category="business", difficulty=2
+            ),
+            Sentence(
+                chinese="这个项目的截止日期是什么时候？",
+                english="When is the deadline for this project?",
+                hint="When is the... for this project?",
+                category="business", difficulty=2
+            ),
+            # Business - Hard
+            Sentence(
+                chinese="我们需要在下周之前完成这份报告。",
+                english="We need to finish this report before next week.",
+                hint="We need to... this report before...",
+                category="business", difficulty=3
+            ),
+            Sentence(
+                chinese="能否请您详细解释一下这个方案？",
+                english="Could you please explain this plan in detail?",
+                hint="Could you please... this plan in detail?",
+                category="business", difficulty=3
+            ),
+            # Social - Easy
+            Sentence(
+                chinese="很高兴认识你！",
+                english="Nice to meet you!",
+                hint="Nice to... you!",
+                category="social", difficulty=1
+            ),
+            Sentence(
+                chinese="你的爱好是什么？",
+                english="What are your hobbies?",
+                hint="What are your...?",
+                category="social", difficulty=1
+            ),
+            # Social - Hard
+            Sentence(
+                chinese="如果你有空的话，我们可以一起去看电影。",
+                english="If you are free, we can go watch a movie together.",
+                hint="If you are..., we can go... together.",
+                category="social", difficulty=3
             ),
         ]
         db.add_all(sentences)
@@ -453,3 +611,4 @@ if __name__ == "__main__":
     db = SessionLocal()
     init_demo_data(db)
     db.close()
+

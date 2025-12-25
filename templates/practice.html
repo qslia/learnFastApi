@@ -4,40 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-primary: #faf9f7;
-            --bg-secondary: #ffffff;
-            --bg-card: #ffffff;
-            --accent: #4f46e5;
-            --accent-light: #818cf8;
-            --accent-glow: rgba(79, 70, 229, 0.15);
-            --text-primary: #1f2937;
-            --text-secondary: #6b7280;
-            --text-chinese: #111827;
-            --border: #e5e7eb;
-            --success: #10b981;
-            --error: #ef4444;
-            --hint-bg: #fef3c7;
-            --hint-text: #92400e;
+            --bg-primary: #0d1117;
+            --bg-secondary: #161b22;
+            --bg-card: #21262d;
+            --bg-elevated: #30363d;
+            --accent: #58a6ff;
+            --accent-secondary: #238636;
+            --accent-warning: #d29922;
+            --accent-error: #f85149;
+            --accent-purple: #a371f7;
+            --text-primary: #f0f6fc;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --border: #30363d;
+            --border-light: #21262d;
+            --success: #3fb950;
+            --success-bg: rgba(63, 185, 80, 0.15);
+            --error: #f85149;
+            --error-bg: rgba(248, 81, 73, 0.15);
+            --glow: rgba(88, 166, 255, 0.4);
         }
 
-        [data-theme="dark"] {
-            --bg-primary: #0a0a0f;
-            --bg-secondary: #12121a;
-            --bg-card: #1a1a24;
-            --accent: #00d4aa;
-            --accent-light: #34d9b3;
-            --accent-glow: rgba(0, 212, 170, 0.2);
-            --text-primary: #ffffff;
-            --text-secondary: #8b8b9e;
-            --text-chinese: #f3f4f6;
-            --border: #2a2a3a;
-            --success: #10b981;
-            --error: #ef4444;
-            --hint-bg: #422006;
-            --hint-text: #fcd34d;
+        [data-theme="light"] {
+            --bg-primary: #f6f8fa;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-elevated: #f6f8fa;
+            --accent: #0969da;
+            --accent-secondary: #1a7f37;
+            --accent-warning: #9a6700;
+            --accent-error: #cf222e;
+            --accent-purple: #8250df;
+            --text-primary: #1f2328;
+            --text-secondary: #656d76;
+            --text-muted: #8c959f;
+            --border: #d0d7de;
+            --border-light: #d8dee4;
+            --success: #1a7f37;
+            --success-bg: rgba(26, 127, 55, 0.1);
+            --error: #cf222e;
+            --error-bg: rgba(207, 34, 46, 0.1);
+            --glow: rgba(9, 105, 218, 0.3);
         }
 
         * {
@@ -47,1285 +57,1720 @@
         }
 
         body {
-            font-family: 'Outfit', 'Noto Sans SC', sans-serif;
+            font-family: 'DM Sans', 'Noto Sans SC', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
             line-height: 1.6;
-            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 2rem;
+        /* Navigation */
+        .top-nav {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        header {
-            text-align: center;
-            padding: 2rem 0 3rem;
-        }
-
-        h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--accent);
-            margin-bottom: 0.5rem;
-        }
-
-        .subtitle {
-            color: var(--text-secondary);
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-weight: 600;
             font-size: 1.1rem;
         }
 
-        nav {
+        .nav-brand svg {
+            width: 28px;
+            height: 28px;
+            color: var(--accent);
+        }
+
+        .nav-links {
             display: flex;
-            justify-content: center;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .nav-links a, .nav-links button {
+            padding: 0.5rem 0.875rem;
+            border-radius: 6px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+
+        .nav-links a:hover, .nav-links button:hover {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .nav-links a.active {
+            color: var(--accent);
+            background: var(--bg-elevated);
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            background: var(--bg-elevated);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .premium-badge {
+            background: linear-gradient(135deg, var(--accent-warning), #f0b429);
+            color: #000;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            min-height: calc(100vh - 57px);
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            .sidebar, .stats-panel {
+                display: none;
+            }
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            margin-bottom: 2rem;
+        }
+
+        .sidebar-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+        }
+
+        .category-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .category-item {
+            display: flex;
+            align-items: center;
             gap: 0.75rem;
-            margin-top: 1.5rem;
+            padding: 0.625rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .category-item:hover {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+
+        .category-item.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .category-icon {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .category-count {
+            margin-left: auto;
+            font-size: 0.75rem;
+            background: var(--bg-elevated);
+            padding: 0.125rem 0.5rem;
+            border-radius: 10px;
+            color: var(--text-muted);
+        }
+
+        .category-item.active .category-count {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        .difficulty-filters {
+            display: flex;
+            gap: 0.5rem;
             flex-wrap: wrap;
         }
 
-        nav a, nav button {
-            padding: 0.5rem 1rem;
-            background: var(--bg-secondary);
+        .diff-btn {
+            padding: 0.375rem 0.75rem;
+            border-radius: 20px;
             border: 1px solid var(--border);
-            border-radius: 8px;
-            color: var(--text-primary);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-family: inherit;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s;
+            font-family: inherit;
         }
 
-        nav a:hover, nav button:hover {
+        .diff-btn:hover {
             border-color: var(--accent);
             color: var(--accent);
         }
 
-        nav button.add-btn {
+        .diff-btn.active {
             background: var(--accent);
             border-color: var(--accent);
             color: white;
         }
 
-        nav button.add-btn:hover {
-            background: var(--accent-light);
-            border-color: var(--accent-light);
+        .diff-btn.easy { --btn-color: var(--success); }
+        .diff-btn.medium { --btn-color: var(--accent-warning); }
+        .diff-btn.hard { --btn-color: var(--error); }
+
+        .diff-btn.easy.active { background: var(--success); border-color: var(--success); }
+        .diff-btn.medium.active { background: var(--accent-warning); border-color: var(--accent-warning); }
+        .diff-btn.hard.active { background: var(--error); border-color: var(--error); }
+
+        /* Practice Area */
+        .practice-area {
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .practice-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            width: 100%;
+            max-width: 700px;
+        }
+
+        .practice-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .practice-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Flashcard */
+        .flashcard-container {
+            perspective: 1000px;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 1.5rem;
+        }
+
+        .flashcard {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2.5rem;
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .flashcard:hover {
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+        }
+
+        .card-badge {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.625rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .badge-category {
+            background: var(--accent);
             color: white;
         }
 
-        .theme-toggle {
+        .badge-difficulty {
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+        }
+
+        .badge-difficulty.easy { background: var(--success-bg); color: var(--success); }
+        .badge-difficulty.medium { background: rgba(210, 153, 34, 0.15); color: var(--accent-warning); }
+        .badge-difficulty.hard { background: var(--error-bg); color: var(--error); }
+
+        .card-actions {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .card-action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+
+        .card-action-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .card-action-btn.bookmarked {
+            background: var(--accent-warning);
+            border-color: var(--accent-warning);
+            color: white;
+        }
+
+        .chinese-text {
+            font-size: 1.75rem;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+            font-family: 'Noto Sans SC', sans-serif;
+        }
+
+        .hint-section {
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .hint-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
 
-        /* Add Sentence Modal */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
+        .hint-text {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            font-style: italic;
         }
 
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        .modal {
-            background: var(--bg-secondary);
-            border-radius: 16px;
-            padding: 2rem;
+        /* Answer Input */
+        .answer-section {
             width: 100%;
-            max-width: 500px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            animation: modalIn 0.3s ease;
-        }
-
-        @keyframes modalIn {
-            from {
-                opacity: 0;
-                transform: translateY(-20px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            max-width: 600px;
             margin-bottom: 1.5rem;
         }
 
-        .modal-title {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--text-primary);
+        .answer-input-wrapper {
+            position: relative;
         }
 
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 0.25rem;
-            line-height: 1;
-            transition: color 0.2s;
-        }
-
-        .modal-close:hover {
-            color: var(--text-primary);
-        }
-
-        .form-group {
-            margin-bottom: 1.25rem;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
-
-        .form-input {
+        .answer-input {
             width: 100%;
-            padding: 0.875rem 1rem;
+            padding: 1rem 1.25rem;
             border: 2px solid var(--border);
-            border-radius: 10px;
-            font-family: 'Noto Sans SC', 'Outfit', sans-serif;
-            font-size: 1rem;
+            border-radius: 12px;
+            background: var(--bg-card);
             color: var(--text-primary);
-            background: var(--bg-primary);
-            transition: all 0.2s ease;
-            resize: none;
-        }
-
-        .form-input:focus {
+            font-size: 1.1rem;
+            font-family: 'Space Mono', monospace;
+            transition: all 0.2s;
             outline: none;
+        }
+
+        .answer-input:focus {
             border-color: var(--accent);
-            box-shadow: 0 0 0 4px var(--accent-glow);
+            box-shadow: 0 0 0 4px var(--glow);
         }
 
-        .form-input::placeholder {
-            color: var(--text-secondary);
-            opacity: 0.6;
+        .answer-input.correct {
+            border-color: var(--success);
+            background: var(--success-bg);
         }
 
-        .form-hint {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-top: 0.35rem;
+        .answer-input.incorrect {
+            border-color: var(--error);
+            background: var(--error-bg);
         }
 
-        .modal-actions {
+        .answer-input::placeholder {
+            color: var(--text-muted);
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        /* Control Buttons */
+        .control-buttons {
             display: flex;
-            gap: 0.75rem;
-            margin-top: 1.5rem;
+            gap: 1rem;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 2rem;
         }
 
         .btn {
             flex: 1;
             padding: 0.875rem 1.5rem;
             border-radius: 10px;
-            font-family: inherit;
+            border: none;
             font-size: 0.95rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .btn-secondary {
-            background: var(--bg-primary);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-        }
-
-        .btn-secondary:hover {
-            border-color: var(--text-secondary);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            font-family: inherit;
         }
 
         .btn-primary {
             background: var(--accent);
-            border: none;
             color: white;
         }
 
         .btn-primary:hover {
-            background: var(--accent-light);
+            filter: brightness(1.1);
+            transform: translateY(-1px);
         }
 
-        .practice-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
-
-        .practice-item {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 1.5rem 2rem;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            transition: all 0.3s ease;
-        }
-
-        .practice-item:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .practice-item.new-item {
-            animation: slideIn 0.4s ease;
-            border-color: var(--accent);
-            box-shadow: 0 0 0 4px var(--accent-glow);
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .item-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-
-        .item-number {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 32px;
-            height: 32px;
-            padding: 0 0.5rem;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .delete-btn {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            cursor: pointer;
-            padding: 0.25rem;
-            font-size: 1.1rem;
-            opacity: 0;
-            transition: all 0.2s ease;
-        }
-
-        .practice-item:hover .delete-btn {
-            opacity: 1;
-        }
-
-        .delete-btn:hover {
-            color: var(--error);
-        }
-
-        .chinese-text {
-            font-family: 'Noto Sans SC', sans-serif;
-            font-size: 1.25rem;
-            font-weight: 500;
-            color: var(--text-chinese);
-            margin-bottom: 1rem;
-            line-height: 1.8;
-        }
-
-        .answer-input {
-            width: 100%;
-            padding: 1rem;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            font-family: 'Outfit', sans-serif;
-            font-size: 1rem;
+        .btn-secondary {
+            background: var(--bg-elevated);
             color: var(--text-primary);
-            background: var(--bg-primary);
-            transition: all 0.2s ease;
-            resize: none;
+            border: 1px solid var(--border);
         }
 
-        .answer-input:focus {
-            outline: none;
+        .btn-secondary:hover {
+            background: var(--bg-card);
             border-color: var(--accent);
-            background: var(--bg-secondary);
-            box-shadow: 0 0 0 4px var(--accent-glow);
         }
 
-        .answer-input::placeholder {
-            color: var(--text-secondary);
-            opacity: 0.6;
-        }
-
-        .item-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 1rem;
-        }
-
-        .hint-btn {
-            padding: 0.5rem 1rem;
-            background: transparent;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text-secondary);
-            font-family: inherit;
-            font-size: 0.85rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .hint-btn:hover {
-            border-color: var(--accent-light);
-            color: var(--accent);
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--border);
-        }
-
-        .status-dot.answered {
+        .btn-success {
             background: var(--success);
+            color: white;
         }
 
-        .hint-text {
-            margin-top: 0.75rem;
-            padding: 0.75rem 1rem;
-            background: var(--hint-bg);
-            border-radius: 8px;
-            font-size: 0.9rem;
-            color: var(--hint-text);
-            display: none;
-        }
-
-        .hint-text.visible {
-            display: block;
-        }
-
-        .progress-bar {
-            position: fixed;
-            top: 0;
-            left: 0;
-            height: 4px;
-            background: var(--accent);
-            transition: width 0.3s ease;
-            z-index: 100;
-        }
-
-        .stats-bar {
-            display: flex;
-            justify-content: center;
-            gap: 2rem;
-            padding: 1rem;
-            background: var(--bg-secondary);
+        .btn-skip {
+            background: transparent;
+            color: var(--text-secondary);
             border: 1px solid var(--border);
-            border-radius: 12px;
-            margin-bottom: 1rem;
         }
 
-        /* Date Stats Panel */
-        .date-stats-panel {
-            background: var(--bg-secondary);
+        .btn-skip:hover {
+            background: var(--bg-elevated);
+        }
+
+        /* Answer Reveal */
+        .answer-reveal {
+            width: 100%;
+            max-width: 600px;
+            background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 1.5rem;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
+            display: none;
         }
 
-        .date-header {
+        .answer-reveal.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .answer-reveal-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 0.75rem;
             margin-bottom: 1rem;
         }
 
-        .today-date {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--accent);
-        }
-
-        .streak-badge {
+        .answer-reveal-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .answer-reveal-icon.correct {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .answer-reveal-icon.incorrect {
+            background: var(--error-bg);
+            color: var(--error);
+        }
+
+        .answer-reveal-title {
             font-weight: 600;
+        }
+
+        .answer-reveal-title.correct { color: var(--success); }
+        .answer-reveal-title.incorrect { color: var(--error); }
+
+        .reference-answer {
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        .your-answer {
+            margin-top: 0.75rem;
             font-size: 0.9rem;
-        }
-
-        .streak-badge.no-streak {
-            background: var(--bg-card);
             color: var(--text-secondary);
-            border: 1px solid var(--border);
         }
 
-        .weekly-chart {
+        .your-answer span {
+            font-family: 'Space Mono', monospace;
+            color: var(--text-primary);
+        }
+
+        /* Progress Bar */
+        .progress-section {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 1.5rem;
+        }
+
+        .progress-info {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
-            height: 80px;
-            gap: 0.5rem;
-            margin-top: 1rem;
-            padding-top: 0.5rem;
-        }
-
-        .day-bar {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.25rem;
-        }
-
-        .bar-fill {
-            width: 100%;
-            max-width: 40px;
-            background: var(--border);
-            border-radius: 4px 4px 0 0;
-            min-height: 4px;
-            transition: all 0.3s ease;
-        }
-
-        .bar-fill.active {
-            background: linear-gradient(180deg, var(--accent) 0%, var(--accent-light) 100%);
-        }
-
-        .bar-fill.today {
-            background: linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%);
-            box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
-        }
-
-        .day-label {
-            font-size: 0.7rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
             color: var(--text-secondary);
-            text-transform: uppercase;
         }
 
-        .day-label.today {
-            color: var(--accent);
-            font-weight: 600;
+        .progress-bar {
+            height: 6px;
+            background: var(--bg-elevated);
+            border-radius: 3px;
+            overflow: hidden;
         }
 
-        .bar-count {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
-            font-weight: 500;
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent-purple));
+            border-radius: 3px;
+            transition: width 0.3s ease;
         }
 
-        .stats-summary {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 1rem;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid var(--border);
+        /* Stats Panel */
+        .stats-panel {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            padding: 1.5rem;
+            overflow-y: auto;
         }
 
-        .summary-item {
-            text-align: center;
+        .stats-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
         }
 
-        .summary-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--accent);
-        }
-
-        .summary-label {
-            font-size: 0.75rem;
-            color: var(--text-secondary);
+        .stats-card-title {
+            font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-        }
-
-        .login-prompt {
-            text-align: center;
-            padding: 1rem;
-            color: var(--text-secondary);
-        }
-
-        .login-prompt a {
-            color: var(--accent);
-            text-decoration: none;
-            font-weight: 500;
-        }
-
-        /* Premium Badge */
-        .premium-badge {
-            display: inline-flex;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            display: flex;
             align-items: center;
-            gap: 0.25rem;
-            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-            color: #1a1a24;
-            padding: 0.2rem 0.6rem;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 600;
+            gap: 0.5rem;
         }
 
-        /* Daily Limit Warning */
-        .limit-warning {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 12px;
-            padding: 1rem;
-            margin-top: 1rem;
-            text-align: center;
+        .streak-display {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
         }
 
-        .limit-warning p {
-            color: #ef4444;
-            margin-bottom: 0.75rem;
-            font-weight: 500;
+        .streak-number {
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--accent-warning);
+            font-family: 'Space Mono', monospace;
+            line-height: 1;
         }
 
-        .upgrade-btn {
-            display: inline-block;
-            background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-            color: #1a1a24;
-            padding: 0.6rem 1.2rem;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
+        .streak-label {
+            color: var(--text-secondary);
             font-size: 0.9rem;
-            transition: all 0.3s ease;
         }
 
-        .upgrade-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+        .streak-label strong {
+            color: var(--text-primary);
+            display: block;
         }
 
-        /* Disabled practice item when limit reached */
-        .practice-item.disabled {
-            opacity: 0.5;
-            pointer-events: none;
-        }
-
-        .practice-item.disabled::after {
-            content: "🔒";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 2rem;
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
         }
 
         .stat-item {
             text-align: center;
+            padding: 0.75rem;
+            background: var(--bg-elevated);
+            border-radius: 8px;
         }
 
         .stat-value {
             font-size: 1.5rem;
             font-weight: 700;
             color: var(--accent);
+            font-family: 'Space Mono', monospace;
         }
 
         .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
         }
 
+        /* History List */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .history-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+        }
+
+        .history-icon.mastered {
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .history-icon.learning {
+            background: rgba(88, 166, 255, 0.15);
+            color: var(--accent);
+        }
+
+        .history-icon.new {
+            background: var(--bg-card);
+            color: var(--text-muted);
+        }
+
+        .history-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: var(--text-secondary);
+        }
+
+        .history-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Daily Limit Warning */
+        .limit-warning {
+            background: var(--error-bg);
+            border: 1px solid var(--error);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .limit-warning-icon {
+            font-size: 1.25rem;
+        }
+
+        .limit-warning-text {
+            flex: 1;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .limit-warning a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .limit-warning a:hover {
+            text-decoration: underline;
+        }
+
+        /* Mastery Indicator */
+        .mastery-indicator {
+            display: flex;
+            gap: 0.25rem;
+            margin-top: 0.5rem;
+        }
+
+        .mastery-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--bg-elevated);
+        }
+
+        .mastery-dot.filled {
+            background: var(--success);
+        }
+
+        /* Empty State */
         .empty-state {
             text-align: center;
-            padding: 3rem 2rem;
+            padding: 3rem;
             color: var(--text-secondary);
         }
 
-        .empty-state .icon {
+        .empty-state-icon {
             font-size: 3rem;
             margin-bottom: 1rem;
         }
 
-        footer {
-            text-align: center;
-            padding: 3rem 0 2rem;
+        .empty-state h3 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-elevated);
             color: var(--text-secondary);
-            font-size: 0.9rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
         }
 
-        footer a {
+        .theme-toggle:hover {
+            border-color: var(--accent);
             color: var(--accent);
-            text-decoration: none;
         }
 
-        @media (max-width: 640px) {
-            .container {
+        /* Keyboard Shortcuts */
+        .shortcuts-hint {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .shortcut {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        kbd {
+            padding: 0.2rem 0.5rem;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.75rem;
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .practice-area {
                 padding: 1rem;
             }
-
-            h1 {
-                font-size: 1.75rem;
+            .flashcard {
+                padding: 1.5rem;
+                min-height: 220px;
             }
-
             .chinese-text {
-                font-size: 1.1rem;
+                font-size: 1.35rem;
             }
-
-            .practice-item {
-                padding: 1.25rem;
-            }
-
-            .stats-bar {
-                gap: 1rem;
-            }
-
-            .date-stats-panel {
-                padding: 1rem;
-            }
-
-            .date-header {
+            .control-buttons {
                 flex-direction: column;
-                gap: 0.75rem;
-                text-align: center;
             }
+            .shortcuts-hint {
+                display: none;
+            }
+        }
 
-            .stats-summary {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        /* Loading spinner */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem;
+        }
 
-            .summary-value {
-                font-size: 1.25rem;
-            }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
 
-            nav {
-                flex-wrap: wrap;
-            }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-color: var(--success);
+        }
+
+        .toast.error {
+            border-color: var(--error);
         }
     </style>
 </head>
 <body>
-    <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
-
-    <div class="container">
-        <header>
-            <h1>📝 English Speaking Practice</h1>
-            <p class="subtitle">Translate the Chinese sentences into English</p>
-            <nav>
-                <a href="/">🏠 Home</a>
-                <a href="/practice">📝 Practice</a>
-                <a href="/community">💬 Community</a>
-                <a href="/pricing">👑 会员</a>
-                <button class="add-btn" onclick="openModal()">➕ Add Sentence</button>
-                {% if user %}
-                <a href="/profile">👤 {{ user.username }}</a>
-                <a href="/logout">🚪 Logout</a>
-                {% else %}
-                <a href="/login">🔐 Login</a>
-                {% endif %}
-                <button class="theme-toggle" onclick="toggleTheme()">
-                    <span id="theme-icon">☀️</span>
-                    <span id="theme-text">Light</span>
-                </button>
-            </nav>
-        </header>
-
-        <div class="stats-bar">
-            <div class="stat-item">
-                <div class="stat-value" id="total-count">{{ sentences|length }}</div>
-                <div class="stat-label">Total</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="answered-count">0</div>
-                <div class="stat-label">Answered</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-value" id="remaining-count">{{ sentences|length }}</div>
-                <div class="stat-label">Remaining</div>
-            </div>
-        </div>
-
-        <!-- Date-based Practice Statistics -->
-        <div class="date-stats-panel" id="date-stats-panel">
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <a href="/" class="nav-brand">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+            </svg>
+            SpeakFlow
+        </a>
+        <div class="nav-links">
+            <a href="/">Home</a>
+            <a href="/practice" class="active">Practice</a>
+            <a href="/community">Community</a>
+            <a href="/pricing">Pricing</a>
             {% if user %}
-            <div class="date-header">
-                <div class="today-date" id="today-date">📅 Loading...</div>
-                <div class="streak-badge no-streak" id="streak-badge">
-                    🔥 <span id="streak-count">0</span> day streak
+                <div class="user-badge">
+                    {% if user.is_premium %}
+                        <span class="premium-badge">PRO</span>
+                    {% endif %}
+                    <span>{{ user.username }}</span>
                 </div>
-            </div>
-            <div class="weekly-chart" id="weekly-chart">
-                <!-- Filled by JavaScript -->
-            </div>
-            <div class="stats-summary">
-                <div class="summary-item">
-                    <div class="summary-value"><span id="today-practiced">0</span><span id="daily-limit-display" style="font-size: 0.8rem; color: var(--text-secondary);">/10</span></div>
-                    <div class="summary-label">Today</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-value" id="total-days">0</div>
-                    <div class="summary-label">Days Practiced</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-value" id="longest-streak">0</div>
-                    <div class="summary-label">Best Streak</div>
-                </div>
-                <div class="summary-item">
-                    <div class="summary-value" id="total-practiced">0</div>
-                    <div class="summary-label">Total Practiced</div>
-                </div>
-            </div>
-            <!-- Daily Limit Warning -->
-            <div class="limit-warning" id="limit-warning" style="display: none;">
-                <p>⚠️ 已达到今日练习上限 (<span id="limit-count">10</span>句)</p>
-                <a href="/pricing" class="upgrade-btn">👑 升级会员解锁无限练习</a>
-            </div>
+                <a href="/logout">Logout</a>
             {% else %}
-            <div class="login-prompt">
-                🔐 <a href="/login">Login</a> to track your daily practice progress and build streaks!
-            </div>
+                <a href="/login">Login</a>
             {% endif %}
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+                <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5"/>
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+            </button>
         </div>
+    </nav>
 
-        <div class="practice-list" id="practice-list">
-            {% for sentence in sentences %}
-            <div class="practice-item" data-id="{{ sentence.id }}">
-                <div class="item-header">
-                    <div class="item-number">{{ sentence.id }}</div>
-                    <button class="delete-btn" onclick="deleteSentence({{ sentence.id }})" title="Delete">🗑️</button>
-                </div>
-                <div class="chinese-text">{{ sentence.chinese }}</div>
-                <textarea 
-                    class="answer-input" 
-                    placeholder="Type your English translation here..."
-                    rows="2"
-                    data-id="{{ sentence.id }}"
-                ></textarea>
-                <div class="item-actions">
-                    <button class="hint-btn" onclick="toggleHint({{ sentence.id }})">
-                        💡 Show Hint
-                    </button>
-                    <div class="status-indicator">
-                        <span class="status-dot" id="status-{{ sentence.id }}"></span>
-                        <span id="status-text-{{ sentence.id }}">Not answered</span>
+    <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Categories</h3>
+                <div class="category-list" id="categoryList">
+                    <div class="category-item active" data-category="all">
+                        <span class="category-icon">📚</span>
+                        <span>All Sentences</span>
+                        <span class="category-count" id="count-all">0</span>
+                    </div>
+                    <div class="category-item" data-category="daily">
+                        <span class="category-icon">🏠</span>
+                        <span>Daily Life</span>
+                        <span class="category-count" id="count-daily">0</span>
+                    </div>
+                    <div class="category-item" data-category="weather">
+                        <span class="category-icon">🌤️</span>
+                        <span>Weather</span>
+                        <span class="category-count" id="count-weather">0</span>
+                    </div>
+                    <div class="category-item" data-category="travel">
+                        <span class="category-icon">✈️</span>
+                        <span>Travel</span>
+                        <span class="category-count" id="count-travel">0</span>
+                    </div>
+                    <div class="category-item" data-category="business">
+                        <span class="category-icon">💼</span>
+                        <span>Business</span>
+                        <span class="category-count" id="count-business">0</span>
+                    </div>
+                    <div class="category-item" data-category="social">
+                        <span class="category-icon">👋</span>
+                        <span>Social</span>
+                        <span class="category-count" id="count-social">0</span>
+                    </div>
+                    <div class="category-item" data-category="bookmarked">
+                        <span class="category-icon">⭐</span>
+                        <span>Bookmarked</span>
+                        <span class="category-count" id="count-bookmarked">0</span>
                     </div>
                 </div>
-                {% if sentence.hint %}
-                <div class="hint-text" id="hint-{{ sentence.id }}">
-                    {{ sentence.hint }}
-                </div>
-                {% endif %}
             </div>
-            {% endfor %}
-        </div>
 
-        <div class="empty-state" id="empty-state" style="display: none;">
-            <div class="icon">📝</div>
-            <h3>No sentences yet</h3>
-            <p>Click "Add Sentence" to add your first practice sentence!</p>
-        </div>
-
-        <footer>
-            <p>Keep practicing! 加油！💪</p>
-        </footer>
-    </div>
-
-    <!-- Add Sentence Modal -->
-    <div class="modal-overlay" id="modal-overlay" onclick="closeModalOnOverlay(event)">
-        <div class="modal">
-            <div class="modal-header">
-                <h2 class="modal-title">➕ Add New Sentence</h2>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Difficulty</h3>
+                <div class="difficulty-filters">
+                    <button class="diff-btn active" data-difficulty="all">All</button>
+                    <button class="diff-btn easy" data-difficulty="1">Easy</button>
+                    <button class="diff-btn medium" data-difficulty="2">Medium</button>
+                    <button class="diff-btn hard" data-difficulty="3">Hard</button>
+                </div>
             </div>
-            <form id="add-sentence-form" onsubmit="addSentence(event)">
-                <div class="form-group">
-                    <label class="form-label" for="sentence-id">Number (ID)</label>
-                    <input 
-                        type="number" 
-                        id="sentence-id" 
-                        class="form-input" 
-                        placeholder="e.g., 149"
-                        required
-                    >
-                    <p class="form-hint">A unique number to identify this sentence</p>
+
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Practice Mode</h3>
+                <div class="category-list">
+                    <div class="category-item active" data-mode="new">
+                        <span class="category-icon">🆕</span>
+                        <span>New Sentences</span>
+                    </div>
+                    <div class="category-item" data-mode="review">
+                        <span class="category-icon">🔄</span>
+                        <span>Review</span>
+                    </div>
+                    <div class="category-item" data-mode="weak">
+                        <span class="category-icon">💪</span>
+                        <span>Weak Points</span>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="sentence-chinese">Chinese Sentence (中文句子)</label>
-                    <textarea 
-                        id="sentence-chinese" 
-                        class="form-input" 
-                        placeholder="输入中文句子..."
-                        rows="2"
-                        required
-                    ></textarea>
+            </div>
+        </aside>
+
+        <!-- Main Practice Area -->
+        <main class="practice-area">
+            <div class="practice-header">
+                <h1 class="practice-title">English Speaking Practice</h1>
+                <p class="practice-subtitle">Translate the Chinese sentence into English</p>
+            </div>
+
+            <!-- Daily Limit Warning (for free users) -->
+            <div class="limit-warning" id="limitWarning" style="display: none;">
+                <span class="limit-warning-icon">⚠️</span>
+                <div class="limit-warning-text">
+                    You've reached your daily limit of <strong id="limitCount">10</strong> sentences.
+                    <a href="/pricing">Upgrade to Premium</a> for unlimited practice!
                 </div>
-                <div class="form-group">
-                    <label class="form-label" for="sentence-hint">Hint (Optional)</label>
+            </div>
+
+            <!-- Progress -->
+            <div class="progress-section">
+                <div class="progress-info">
+                    <span>Today's Progress</span>
+                    <span><span id="practiceCount">0</span> / <span id="dailyLimit">10</span> sentences</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Flashcard -->
+            <div class="flashcard-container">
+                <div class="flashcard" id="flashcard">
+                    <div class="card-badge">
+                        <span class="badge badge-category" id="cardCategory">Daily</span>
+                        <span class="badge badge-difficulty easy" id="cardDifficulty">Easy</span>
+                    </div>
+                    <div class="card-actions">
+                        <button class="card-action-btn" id="bookmarkBtn" title="Bookmark">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                            </svg>
+                        </button>
+                        <button class="card-action-btn" id="speakBtn" title="Listen">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="chinese-text" id="chineseText">Loading...</div>
+                    <div class="hint-section" id="hintSection">
+                        <div class="hint-label">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                                <line x1="12" y1="17" x2="12.01" y2="17"/>
+                            </svg>
+                            Hint
+                        </div>
+                        <div class="hint-text" id="hintText">-</div>
+                    </div>
+                    <div class="mastery-indicator" id="masteryIndicator">
+                        <div class="mastery-dot"></div>
+                        <div class="mastery-dot"></div>
+                        <div class="mastery-dot"></div>
+                        <div class="mastery-dot"></div>
+                        <div class="mastery-dot"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Answer Input -->
+            <div class="answer-section">
+                <div class="answer-input-wrapper">
                     <input 
                         type="text" 
-                        id="sentence-hint" 
-                        class="form-input" 
-                        placeholder="e.g., The weather is..."
+                        class="answer-input" 
+                        id="answerInput" 
+                        placeholder="Type your English translation here..."
+                        autocomplete="off"
                     >
-                    <p class="form-hint">A helpful hint for the English translation</p>
                 </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Sentence</button>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="control-buttons">
+                <button class="btn btn-skip" id="skipBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 4 15 12 5 20 5 4"/>
+                        <line x1="19" y1="5" x2="19" y2="19"/>
+                    </svg>
+                    Skip
+                </button>
+                <button class="btn btn-secondary" id="showAnswerBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    Show Answer
+                </button>
+                <button class="btn btn-primary" id="checkBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Check
+                </button>
+            </div>
+
+            <!-- Answer Reveal -->
+            <div class="answer-reveal" id="answerReveal">
+                <div class="answer-reveal-header">
+                    <div class="answer-reveal-icon" id="revealIcon">✓</div>
+                    <div class="answer-reveal-title" id="revealTitle">Correct!</div>
                 </div>
-            </form>
-        </div>
-    </div>
-
-    <script>
-        // Theme toggle functionality
-        function toggleTheme() {
-            const html = document.documentElement;
-            const currentTheme = html.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
-            html.setAttribute('data-theme', newTheme);
-            localStorage.setItem('theme', newTheme);
-            updateThemeButton(newTheme);
-        }
-
-        function updateThemeButton(theme) {
-            const icon = document.getElementById('theme-icon');
-            const text = document.getElementById('theme-text');
-            
-            if (theme === 'dark') {
-                icon.textContent = '🌙';
-                text.textContent = 'Dark';
-            } else {
-                icon.textContent = '☀️';
-                text.textContent = 'Light';
-            }
-        }
-
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.documentElement.setAttribute('data-theme', savedTheme);
-        updateThemeButton(savedTheme);
-
-        let totalCount = {{ sentences|length }};
-        let answeredCount = 0;
-        let nextId = Math.max(...[{% for s in sentences %}{{ s.id }},{% endfor %}0]) + 1;
-
-        // Initialize input listeners
-        function initInputListeners() {
-            document.querySelectorAll('.answer-input').forEach(input => {
-                input.removeEventListener('input', handleInput);
-                input.addEventListener('input', handleInput);
-            });
-        }
-
-        // Track which sentences have been recorded today (to avoid duplicate API calls)
-        let recordedToday = new Set();
-        let isLoggedIn = {{ 'true' if user else 'false' }};
-
-        function handleInput(e) {
-            const input = e.target;
-            const id = input.dataset.id;
-            const statusDot = document.getElementById(`status-${id}`);
-            const statusText = document.getElementById(`status-text-${id}`);
-            
-            if (input.value.trim().length > 0) {
-                if (!statusDot.classList.contains('answered')) {
-                    statusDot.classList.add('answered');
-                    statusText.textContent = 'Answered';
-                    answeredCount++;
-                    updateStats();
-                    
-                    // Record practice for logged-in users
-                    if (isLoggedIn && !recordedToday.has(parseInt(id))) {
-                        recordPractice(parseInt(id));
-                    }
-                }
-            } else {
-                if (statusDot.classList.contains('answered')) {
-                    statusDot.classList.remove('answered');
-                    statusText.textContent = 'Not answered';
-                    answeredCount--;
-                    updateStats();
-                }
-            }
-
-            // Auto-resize
-            input.style.height = 'auto';
-            input.style.height = (input.scrollHeight) + 'px';
-        }
-
-        // Record practice to server
-        async function recordPractice(sentenceId) {
-            try {
-                const response = await fetch('/api/practice/record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ sentence_id: sentenceId })
-                });
-                
-                if (response.ok) {
-                    recordedToday.add(sentenceId);
-                    // Update the today practiced count
-                    const todayEl = document.getElementById('today-practiced');
-                    if (todayEl) {
-                        const newCount = parseInt(todayEl.textContent) + 1;
-                        todayEl.textContent = newCount;
-                        
-                        // Check if limit reached
-                        if (dailyLimit > 0 && newCount >= dailyLimit) {
-                            canPractice = false;
-                            showLimitWarning();
-                        }
-                    }
-                    // Update total practiced
-                    const totalEl = document.getElementById('total-practiced');
-                    if (totalEl) {
-                        totalEl.textContent = parseInt(totalEl.textContent) + 1;
-                    }
-                } else if (response.status === 403) {
-                    // Daily limit reached
-                    const error = await response.json();
-                    if (error.detail && error.detail.limit_reached) {
-                        canPractice = false;
-                        showLimitWarning();
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to record practice:', err);
-            }
-        }
-
-        initInputListeners();
-
-        function updateStats() {
-            document.getElementById('total-count').textContent = totalCount;
-            document.getElementById('answered-count').textContent = answeredCount;
-            document.getElementById('remaining-count').textContent = totalCount - answeredCount;
-            
-            const progress = totalCount > 0 ? (answeredCount / totalCount) * 100 : 0;
-            document.getElementById('progress-bar').style.width = `${progress}%`;
-
-            // Show/hide empty state
-            document.getElementById('empty-state').style.display = totalCount === 0 ? 'block' : 'none';
-            document.getElementById('practice-list').style.display = totalCount === 0 ? 'none' : 'flex';
-        }
-
-        function toggleHint(id) {
-            const hint = document.getElementById(`hint-${id}`);
-            if (hint) {
-                hint.classList.toggle('visible');
-            }
-        }
-
-        // Modal functions
-        function openModal() {
-            document.getElementById('modal-overlay').classList.add('active');
-            document.getElementById('sentence-id').value = nextId;
-            document.getElementById('sentence-chinese').focus();
-        }
-
-        function closeModal() {
-            document.getElementById('modal-overlay').classList.remove('active');
-            document.getElementById('add-sentence-form').reset();
-        }
-
-        function closeModalOnOverlay(e) {
-            if (e.target === document.getElementById('modal-overlay')) {
-                closeModal();
-            }
-        }
-
-        // Add new sentence
-        async function addSentence(e) {
-            e.preventDefault();
-            
-            const id = parseInt(document.getElementById('sentence-id').value);
-            const chinese = document.getElementById('sentence-chinese').value.trim();
-            const hint = document.getElementById('sentence-hint').value.trim();
-
-            if (!chinese) return;
-
-            // Send to API
-            try {
-                const response = await fetch('/api/sentences', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id, chinese, hint: hint || null })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    alert(error.detail || 'Failed to add sentence');
-                    return;
-                }
-
-                const newSentence = await response.json();
-                
-                // Add to DOM
-                const practiceList = document.getElementById('practice-list');
-                const newItem = createSentenceElement(newSentence);
-                practiceList.insertBefore(newItem, practiceList.firstChild);
-
-                // Update counts
-                totalCount++;
-                nextId = Math.max(nextId, id + 1);
-                updateStats();
-                initInputListeners();
-
-                // Close modal
-                closeModal();
-
-                // Scroll to new item
-                newItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-            } catch (err) {
-                alert('Failed to add sentence: ' + err.message);
-            }
-        }
-
-        function createSentenceElement(sentence) {
-            const div = document.createElement('div');
-            div.className = 'practice-item new-item';
-            div.dataset.id = sentence.id;
-            
-            div.innerHTML = `
-                <div class="item-header">
-                    <div class="item-number">${sentence.id}</div>
-                    <button class="delete-btn" onclick="deleteSentence(${sentence.id})" title="Delete">🗑️</button>
+                <div class="reference-answer" id="referenceAnswer">-</div>
+                <div class="your-answer" id="yourAnswerSection">
+                    Your answer: <span id="yourAnswer">-</span>
                 </div>
-                <div class="chinese-text">${sentence.chinese}</div>
-                <textarea 
-                    class="answer-input" 
-                    placeholder="Type your English translation here..."
-                    rows="2"
-                    data-id="${sentence.id}"
-                ></textarea>
-                <div class="item-actions">
-                    <button class="hint-btn" onclick="toggleHint(${sentence.id})">
-                        💡 Show Hint
+                <div class="control-buttons" style="margin-top: 1rem; margin-bottom: 0;">
+                    <button class="btn btn-success" id="nextBtn">
+                        Next Sentence
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="5" y1="12" x2="19" y2="12"/>
+                            <polyline points="12 5 19 12 12 19"/>
+                        </svg>
                     </button>
-                    <div class="status-indicator">
-                        <span class="status-dot" id="status-${sentence.id}"></span>
-                        <span id="status-text-${sentence.id}">Not answered</span>
+                </div>
+            </div>
+
+            <!-- Keyboard Shortcuts -->
+            <div class="shortcuts-hint">
+                <div class="shortcut"><kbd>Enter</kbd> Check/Next</div>
+                <div class="shortcut"><kbd>Ctrl+H</kbd> Show hint</div>
+                <div class="shortcut"><kbd>Ctrl+S</kbd> Skip</div>
+            </div>
+        </main>
+
+        <!-- Stats Panel -->
+        <aside class="stats-panel">
+            <div class="stats-card">
+                <h3 class="stats-card-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                    Current Streak
+                </h3>
+                <div class="streak-display">
+                    <span class="streak-number" id="currentStreak">0</span>
+                    <div class="streak-label">
+                        <strong>days</strong>
+                        in a row
                     </div>
                 </div>
-                ${sentence.hint ? `<div class="hint-text" id="hint-${sentence.id}">${sentence.hint}</div>` : ''}
-            `;
+            </div>
 
-            // Remove highlight after animation
-            setTimeout(() => {
-                div.classList.remove('new-item');
-            }, 2000);
+            <div class="stats-card">
+                <h3 class="stats-card-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10"/>
+                        <line x1="12" y1="20" x2="12" y2="4"/>
+                        <line x1="6" y1="20" x2="6" y2="14"/>
+                    </svg>
+                    Statistics
+                </h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalPracticed">0</div>
+                        <div class="stat-label">Total Practiced</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="masteredCount">0</div>
+                        <div class="stat-label">Mastered</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="longestStreak">0</div>
+                        <div class="stat-label">Best Streak</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalDays">0</div>
+                        <div class="stat-label">Days Active</div>
+                    </div>
+                </div>
+            </div>
 
-            return div;
-        }
+            <div class="stats-card">
+                <h3 class="stats-card-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    Recent Activity
+                </h3>
+                <div class="history-list" id="historyList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
 
-        // Delete sentence
-        async function deleteSentence(id) {
-            if (!confirm('Are you sure you want to delete this sentence?')) return;
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
 
-            try {
-                const response = await fetch(`/api/sentences/${id}`, {
-                    method: 'DELETE'
-                });
+    <script>
+        // State
+        let sentences = [];
+        let currentSentence = null;
+        let currentIndex = 0;
+        let practiceHistory = [];
+        let userStats = {
+            currentStreak: 0,
+            longestStreak: 0,
+            totalPracticed: 0,
+            totalDays: 0,
+            masteredCount: 0,
+            dailyCount: 0,
+            dailyLimit: {{ user.tier_limits if user else 10 }}
+        };
+        let filters = {
+            category: 'all',
+            difficulty: 'all',
+            mode: 'new'
+        };
+        let isAnswerRevealed = false;
+        let isPremium = {{ 'true' if user and user.is_premium else 'false' }};
+        let isLoggedIn = {{ 'true' if user else 'false' }};
 
-                if (!response.ok) {
-                    alert('Failed to delete sentence');
-                    return;
-                }
+        // Initialize with server-side sentences as fallback
+        sentences = {{ sentences | tojson | safe }};
 
-                // Remove from DOM
-                const item = document.querySelector(`.practice-item[data-id="${id}"]`);
-                if (item) {
-                    // Check if it was answered
-                    const statusDot = document.getElementById(`status-${id}`);
-                    if (statusDot && statusDot.classList.contains('answered')) {
-                        answeredCount--;
-                    }
-                    
-                    item.remove();
-                    totalCount--;
-                    updateStats();
-                }
-
-            } catch (err) {
-                alert('Failed to delete sentence: ' + err.message);
-            }
-        }
-
-        // Close modal with Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeModal();
-        });
-
-        // Subscription status
-        let subscriptionInfo = null;
-        let dailyLimit = 10;
-        let canPractice = true;
-
-        // Load subscription status
-        async function loadSubscriptionStatus() {
-            if (!isLoggedIn) return;
-
-            try {
-                const response = await fetch('/api/subscription/status');
-                if (!response.ok) return;
-
-                subscriptionInfo = await response.json();
-                dailyLimit = subscriptionInfo.limits.daily_sentences;
-                canPractice = subscriptionInfo.limits.can_practice;
-
-                // Update daily limit display
-                const limitDisplay = document.getElementById('daily-limit-display');
-                if (limitDisplay) {
-                    if (dailyLimit === -1) {
-                        limitDisplay.textContent = ' (无限)';
-                        limitDisplay.style.color = 'var(--success)';
-                    } else {
-                        limitDisplay.textContent = `/${dailyLimit}`;
-                    }
-                }
-
-                // Show limit warning if reached
-                if (!canPractice) {
-                    showLimitWarning();
-                }
-
-            } catch (err) {
-                console.error('Failed to load subscription status:', err);
-            }
-        }
-
-        function showLimitWarning() {
-            const warning = document.getElementById('limit-warning');
-            if (warning) {
-                warning.style.display = 'block';
-                document.getElementById('limit-count').textContent = dailyLimit;
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            initTheme();
+            
+            // If no sentences from server, try API
+            if (!sentences || sentences.length === 0) {
+                await loadSentences();
+            } else {
+                updateCategoryCounts();
             }
             
-            // Disable unanswered practice items
-            document.querySelectorAll('.practice-item').forEach(item => {
-                const id = item.dataset.id;
-                if (!recordedToday.has(parseInt(id))) {
-                    item.classList.add('disabled');
+            // Load user-specific data
+            if (isLoggedIn) {
+                await loadUserStats();
+                await loadHistory();
+            } else {
+                // Show login message for history
+                document.getElementById('historyList').innerHTML = `
+                    <div class="empty-state">
+                        <p>Login to track your progress</p>
+                    </div>
+                `;
+            }
+            
+            setupEventListeners();
+            showNextSentence();
+        });
+
+        // Theme
+        function initTheme() {
+            const saved = localStorage.getItem('theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', saved);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+
+        // Load sentences from API (fallback)
+        async function loadSentences() {
+            try {
+                const response = await fetch('/api/sentences');
+                if (response.ok) {
+                    sentences = await response.json();
+                    updateCategoryCounts();
+                } else {
+                    console.error('Failed to load sentences:', response.status);
+                    document.getElementById('chineseText').textContent = 'Failed to load sentences';
                 }
+            } catch (error) {
+                console.error('Failed to load sentences:', error);
+                document.getElementById('chineseText').textContent = 'Failed to load sentences';
+            }
+        }
+
+        // Load user stats
+        async function loadUserStats() {
+            if (!isLoggedIn) return;
+            
+            try {
+                const response = await fetch('/api/practice/stats');
+                if (response.ok) {
+                    const data = await response.json();
+                    userStats = {
+                        ...userStats,
+                        currentStreak: data.current_streak || 0,
+                        longestStreak: data.longest_streak || 0,
+                        totalPracticed: data.total_sentences_practiced || 0,
+                        totalDays: data.total_practice_days || 0,
+                        masteredCount: data.mastered_count || 0,
+                        dailyCount: data.today_count || 0,
+                        dailyLimit: data.daily_limit || 10
+                    };
+                    updateStatsDisplay();
+                    checkDailyLimit();
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // Load practice history
+        async function loadHistory() {
+            if (!isLoggedIn) {
+                document.getElementById('historyList').innerHTML = `
+                    <div class="empty-state">
+                        <p>Login to track your progress</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/practice/history?limit=10');
+                if (response.ok) {
+                    practiceHistory = await response.json();
+                    renderHistory();
+                } else {
+                    document.getElementById('historyList').innerHTML = `
+                        <div class="empty-state">
+                            <p>No practice history yet</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to load history:', error);
+                document.getElementById('historyList').innerHTML = `
+                    <div class="empty-state">
+                        <p>Failed to load history</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Update category counts
+        function updateCategoryCounts() {
+            const counts = { all: sentences.length };
+            sentences.forEach(s => {
+                const cat = s.category || 'general';
+                counts[cat] = (counts[cat] || 0) + 1;
+            });
+            
+            Object.keys(counts).forEach(cat => {
+                const el = document.getElementById(`count-${cat}`);
+                if (el) el.textContent = counts[cat];
             });
         }
 
-        // Load practice statistics for logged-in users
-        async function loadPracticeStats() {
-            if (!isLoggedIn) return;
+        // Update stats display
+        function updateStatsDisplay() {
+            document.getElementById('currentStreak').textContent = userStats.currentStreak;
+            document.getElementById('longestStreak').textContent = userStats.longestStreak;
+            document.getElementById('totalPracticed').textContent = userStats.totalPracticed;
+            document.getElementById('totalDays').textContent = userStats.totalDays;
+            document.getElementById('masteredCount').textContent = userStats.masteredCount;
+            document.getElementById('practiceCount').textContent = userStats.dailyCount;
+            document.getElementById('dailyLimit').textContent = isPremium ? '∞' : userStats.dailyLimit;
+            
+            // Update progress bar
+            const progress = isPremium ? 50 : Math.min((userStats.dailyCount / userStats.dailyLimit) * 100, 100);
+            document.getElementById('progressFill').style.width = `${progress}%`;
+        }
 
-            try {
-                const response = await fetch('/api/practice/stats');
-                if (!response.ok) return;
-
-                const stats = await response.json();
-                
-                // Update today's date
-                const today = new Date(stats.today_date);
-                const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                document.getElementById('today-date').textContent = 
-                    '📅 ' + today.toLocaleDateString('en-US', dateOptions);
-                
-                // Update streak badge
-                const streakBadge = document.getElementById('streak-badge');
-                const streakCount = document.getElementById('streak-count');
-                streakCount.textContent = stats.current_streak;
-                if (stats.current_streak > 0) {
-                    streakBadge.classList.remove('no-streak');
-                } else {
-                    streakBadge.classList.add('no-streak');
-                }
-                
-                // Update summary stats
-                document.getElementById('today-practiced').textContent = stats.today_practiced;
-                document.getElementById('total-days').textContent = stats.total_practice_days;
-                document.getElementById('longest-streak').textContent = stats.longest_streak;
-                document.getElementById('total-practiced').textContent = stats.total_sentences_practiced;
-                
-                // Store today's practiced sentence IDs
-                stats.today_sentence_ids.forEach(id => recordedToday.add(id));
-                
-                // Mark already practiced sentences as answered
-                stats.today_sentence_ids.forEach(id => {
-                    const statusDot = document.getElementById(`status-${id}`);
-                    const statusText = document.getElementById(`status-text-${id}`);
-                    if (statusDot && !statusDot.classList.contains('answered')) {
-                        statusDot.classList.add('answered');
-                        if (statusText) statusText.textContent = 'Practiced today';
-                        answeredCount++;
-                    }
-                });
-                updateStats();
-                
-                // Build weekly chart
-                buildWeeklyChart(stats.last_7_days);
-                
-            } catch (err) {
-                console.error('Failed to load practice stats:', err);
+        // Check daily limit
+        function checkDailyLimit() {
+            if (!isPremium && userStats.dailyCount >= userStats.dailyLimit) {
+                document.getElementById('limitWarning').style.display = 'flex';
+                document.getElementById('limitCount').textContent = userStats.dailyLimit;
+                document.getElementById('answerInput').disabled = true;
+                document.getElementById('checkBtn').disabled = true;
             }
         }
 
-        function buildWeeklyChart(days) {
-            const chartContainer = document.getElementById('weekly-chart');
-            if (!chartContainer) return;
-
-            // Find max count for scaling
-            const maxCount = Math.max(...days.map(d => d.count), 1);
-            const today = new Date().toISOString().split('T')[0];
+        // Render history
+        function renderHistory() {
+            const container = document.getElementById('historyList');
             
-            chartContainer.innerHTML = days.map(day => {
-                const height = day.count > 0 ? Math.max((day.count / maxCount) * 60, 8) : 4;
-                const isToday = day.date === today;
-                const isActive = day.count > 0;
+            if (practiceHistory.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>No practice history yet</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = practiceHistory.map(item => {
+                const iconClass = item.is_mastered ? 'mastered' : (item.mastery_level > 0 ? 'learning' : 'new');
+                const icon = item.is_mastered ? '✓' : (item.mastery_level > 0 ? '◐' : '○');
+                const timeAgo = getTimeAgo(item.updated_at);
                 
                 return `
-                    <div class="day-bar">
-                        <div class="bar-count">${day.count > 0 ? day.count : ''}</div>
-                        <div class="bar-fill ${isToday ? 'today' : (isActive ? 'active' : '')}" 
-                             style="height: ${height}px"></div>
-                        <div class="day-label ${isToday ? 'today' : ''}">${day.day_name}</div>
+                    <div class="history-item">
+                        <div class="history-icon ${iconClass}">${icon}</div>
+                        <div class="history-text">${item.chinese || 'Unknown'}</div>
+                        <div class="history-time">${timeAgo}</div>
                     </div>
                 `;
             }).join('');
         }
 
-        // Load stats on page load
-        if (isLoggedIn) {
-            loadSubscriptionStatus();
-            loadPracticeStats();
+        // Get filtered sentences
+        function getFilteredSentences() {
+            return sentences.filter(s => {
+                if (filters.category !== 'all' && filters.category !== 'bookmarked') {
+                    if (s.category !== filters.category) return false;
+                }
+                if (filters.difficulty !== 'all') {
+                    if (s.difficulty !== parseInt(filters.difficulty)) return false;
+                }
+                return true;
+            });
+        }
+
+        // Show next sentence
+        function showNextSentence() {
+            const filtered = getFilteredSentences();
+            
+            if (filtered.length === 0) {
+                document.getElementById('chineseText').textContent = 'No sentences available';
+                document.getElementById('hintText').textContent = 'Try selecting a different category';
+                return;
+            }
+            
+            // Get random sentence
+            currentIndex = Math.floor(Math.random() * filtered.length);
+            currentSentence = filtered[currentIndex];
+            
+            // Update display
+            document.getElementById('chineseText').textContent = currentSentence.chinese;
+            document.getElementById('hintText').textContent = currentSentence.hint || 'No hint available';
+            document.getElementById('cardCategory').textContent = capitalizeFirst(currentSentence.category || 'General');
+            
+            // Update difficulty badge
+            const diffBadge = document.getElementById('cardDifficulty');
+            const diffMap = { 1: 'Easy', 2: 'Medium', 3: 'Hard' };
+            const diffClass = { 1: 'easy', 2: 'medium', 3: 'hard' };
+            diffBadge.textContent = diffMap[currentSentence.difficulty] || 'Easy';
+            diffBadge.className = `badge badge-difficulty ${diffClass[currentSentence.difficulty] || 'easy'}`;
+            
+            // Update mastery indicator
+            updateMasteryIndicator(currentSentence.mastery_level || 0);
+            
+            // Reset state
+            isAnswerRevealed = false;
+            document.getElementById('answerInput').value = '';
+            document.getElementById('answerInput').className = 'answer-input';
+            document.getElementById('answerReveal').classList.remove('show');
+            document.getElementById('answerInput').focus();
+        }
+
+        // Update mastery indicator
+        function updateMasteryIndicator(level) {
+            const dots = document.querySelectorAll('.mastery-dot');
+            dots.forEach((dot, i) => {
+                dot.classList.toggle('filled', i < level);
+            });
+        }
+
+        // Check answer
+        async function checkAnswer() {
+            if (!currentSentence || isAnswerRevealed) {
+                if (isAnswerRevealed) {
+                    showNextSentence();
+                }
+                return;
+            }
+            
+            const userAnswer = document.getElementById('answerInput').value.trim();
+            
+            if (!userAnswer) {
+                showToast('Please enter your answer', 'error');
+                return;
+            }
+            
+            // Check daily limit
+            if (!isPremium && userStats.dailyCount >= userStats.dailyLimit) {
+                showToast('Daily limit reached! Upgrade to continue.', 'error');
+                return;
+            }
+            
+            // Simple comparison (could be improved with fuzzy matching)
+            const reference = currentSentence.english || '';
+            const isCorrect = compareAnswers(userAnswer, reference);
+            
+            // Show result
+            showAnswerReveal(userAnswer, reference, isCorrect);
+            
+            // Record practice
+            if (isLoggedIn) {
+                await recordPractice(currentSentence.id, userAnswer, isCorrect);
+            }
+        }
+
+        // Compare answers (basic fuzzy matching)
+        function compareAnswers(user, reference) {
+            const normalize = (s) => s.toLowerCase()
+                .replace(/[.,!?;:'"]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            
+            const userNorm = normalize(user);
+            const refNorm = normalize(reference);
+            
+            // Exact match
+            if (userNorm === refNorm) return true;
+            
+            // Check if most words match
+            const userWords = userNorm.split(' ');
+            const refWords = refNorm.split(' ');
+            
+            let matches = 0;
+            userWords.forEach(w => {
+                if (refWords.includes(w)) matches++;
+            });
+            
+            return matches / Math.max(userWords.length, refWords.length) > 0.7;
+        }
+
+        // Show answer reveal
+        function showAnswerReveal(userAnswer, reference, isCorrect) {
+            isAnswerRevealed = true;
+            
+            const input = document.getElementById('answerInput');
+            input.className = `answer-input ${isCorrect ? 'correct' : 'incorrect'}`;
+            
+            const reveal = document.getElementById('answerReveal');
+            const icon = document.getElementById('revealIcon');
+            const title = document.getElementById('revealTitle');
+            
+            icon.textContent = isCorrect ? '✓' : '✗';
+            icon.className = `answer-reveal-icon ${isCorrect ? 'correct' : 'incorrect'}`;
+            title.textContent = isCorrect ? 'Correct!' : 'Not quite right';
+            title.className = `answer-reveal-title ${isCorrect ? 'correct' : 'incorrect'}`;
+            
+            document.getElementById('referenceAnswer').textContent = reference || 'No reference answer available';
+            document.getElementById('yourAnswer').textContent = userAnswer;
+            
+            reveal.classList.add('show');
+        }
+
+        // Show answer without checking
+        function showAnswer() {
+            if (!currentSentence || isAnswerRevealed) return;
+            
+            const userAnswer = document.getElementById('answerInput').value.trim() || '(no answer)';
+            showAnswerReveal(userAnswer, currentSentence.english || '', false);
+        }
+
+        // Record practice
+        async function recordPractice(sentenceId, userAnswer, isCorrect) {
+            try {
+                const response = await fetch('/api/practice/record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sentence_id: sentenceId,
+                        user_answer: userAnswer,
+                        is_correct: isCorrect
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    userStats.dailyCount = data.today_count || userStats.dailyCount + 1;
+                    userStats.totalPracticed = data.total_practiced || userStats.totalPracticed + 1;
+                    updateStatsDisplay();
+                    checkDailyLimit();
+                    
+                    // Reload history
+                    loadHistory();
+                } else if (response.status === 429) {
+                    showToast('Daily limit reached!', 'error');
+                    checkDailyLimit();
+                }
+            } catch (error) {
+                console.error('Failed to record practice:', error);
+            }
+        }
+
+        // Skip sentence
+        function skipSentence() {
+            showNextSentence();
+        }
+
+        // Toggle bookmark
+        function toggleBookmark() {
+            const btn = document.getElementById('bookmarkBtn');
+            btn.classList.toggle('bookmarked');
+            
+            if (btn.classList.contains('bookmarked')) {
+                showToast('Bookmarked!', 'success');
+            }
+        }
+
+        // Speak text
+        function speakText() {
+            if (!currentSentence?.english) return;
+            
+            const utterance = new SpeechSynthesisUtterance(currentSentence.english);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;
+            speechSynthesis.speak(utterance);
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Check button
+            document.getElementById('checkBtn').addEventListener('click', checkAnswer);
+            
+            // Show answer button
+            document.getElementById('showAnswerBtn').addEventListener('click', showAnswer);
+            
+            // Skip button
+            document.getElementById('skipBtn').addEventListener('click', skipSentence);
+            
+            // Next button
+            document.getElementById('nextBtn').addEventListener('click', showNextSentence);
+            
+            // Bookmark button
+            document.getElementById('bookmarkBtn').addEventListener('click', toggleBookmark);
+            
+            // Speak button
+            document.getElementById('speakBtn').addEventListener('click', speakText);
+            
+            // Enter key to check/next
+            document.getElementById('answerInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    if (isAnswerRevealed) {
+                        showNextSentence();
+                    } else {
+                        checkAnswer();
+                    }
+                }
+            });
+            
+            // Category filters
+            document.querySelectorAll('.category-item[data-category]').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.category-item[data-category]').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    filters.category = item.dataset.category;
+                    showNextSentence();
+                });
+            });
+            
+            // Difficulty filters
+            document.querySelectorAll('.diff-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    filters.difficulty = btn.dataset.difficulty;
+                    showNextSentence();
+                });
+            });
+            
+            // Mode filters
+            document.querySelectorAll('.category-item[data-mode]').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.category-item[data-mode]').forEach(i => i.classList.remove('active'));
+                    item.classList.add('active');
+                    filters.mode = item.dataset.mode;
+                    showNextSentence();
+                });
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey && e.key === 's') {
+                    e.preventDefault();
+                    skipSentence();
+                }
+                if (e.ctrlKey && e.key === 'h') {
+                    e.preventDefault();
+                    document.getElementById('hintSection').scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        }
+
+        // Toast notification
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Utility functions
+        function capitalizeFirst(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        function getTimeAgo(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = Math.floor((now - date) / 1000);
+            
+            if (diff < 60) return 'just now';
+            if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+            return `${Math.floor(diff / 86400)}d ago`;
         }
     </script>
 </body>
