@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +15,21 @@
             --text-primary: #ffffff;
             --text-secondary: #8b8b9e;
             --border: #2a2a3a;
+            --gradient-1: rgba(0, 212, 170, 0.08);
+            --gradient-2: rgba(99, 102, 241, 0.08);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --accent: #4f46e5;
+            --accent-glow: rgba(79, 70, 229, 0.15);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --gradient-1: rgba(79, 70, 229, 0.05);
+            --gradient-2: rgba(99, 102, 241, 0.05);
         }
 
         * {
@@ -29,8 +44,9 @@
             color: var(--text-primary);
             min-height: 100vh;
             background-image: 
-                radial-gradient(ellipse at top left, rgba(0, 212, 170, 0.08) 0%, transparent 50%),
-                radial-gradient(ellipse at bottom right, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+                radial-gradient(ellipse at top left, var(--gradient-1) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, var(--gradient-2) 0%, transparent 50%);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .container {
@@ -43,17 +59,43 @@
             margin-bottom: 2rem;
         }
 
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
         .back-link {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
             color: var(--text-secondary);
             text-decoration: none;
-            margin-bottom: 1rem;
             transition: color 0.3s ease;
         }
 
         .back-link:hover {
+            color: var(--accent);
+        }
+
+        .theme-toggle {
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent);
             color: var(--accent);
         }
 
@@ -90,7 +132,7 @@
         .filter-btn.active {
             background: var(--accent);
             border-color: var(--accent);
-            color: var(--bg-primary);
+            color: white;
         }
 
         .items-grid {
@@ -109,7 +151,7 @@
 
         .item-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
             border-color: var(--accent);
         }
 
@@ -139,7 +181,7 @@
             padding: 0.25rem 0.75rem;
             border-radius: 20px;
             font-size: 0.75rem;
-            color: var(--text-secondary);
+            color: #ffffff;
         }
 
         .item-content {
@@ -149,7 +191,7 @@
         .item-category {
             display: inline-block;
             padding: 0.25rem 0.75rem;
-            background: rgba(0, 212, 170, 0.15);
+            background: var(--accent-glow);
             color: var(--accent);
             border-radius: 20px;
             font-size: 0.75rem;
@@ -214,12 +256,27 @@
             font-size: 4rem;
             margin-bottom: 1rem;
         }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            h1 {
+                font-size: 1.75rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <a href="/" class="back-link">← Back to Home</a>
+            <div class="header-top">
+                <a href="/" class="back-link">← Back to Home</a>
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <span id="theme-icon">🌙</span>
+                    <span id="theme-text">Dark</span>
+                </button>
+            </div>
             <h1>📦 {{ title }}</h1>
         </header>
 
@@ -271,6 +328,36 @@
         </div>
         {% endif %}
     </div>
+
+    <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            
+            if (theme === 'dark') {
+                icon.textContent = '🌙';
+                text.textContent = 'Dark';
+            } else {
+                icon.textContent = '☀️';
+                text.textContent = 'Light';
+            }
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+    </script>
 </body>
 </html>
-

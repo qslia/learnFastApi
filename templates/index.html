@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +15,21 @@
             --text-primary: #ffffff;
             --text-secondary: #8b8b9e;
             --border: #2a2a3a;
+            --gradient-1: rgba(0, 212, 170, 0.08);
+            --gradient-2: rgba(99, 102, 241, 0.08);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --accent: #4f46e5;
+            --accent-glow: rgba(79, 70, 229, 0.15);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --gradient-1: rgba(79, 70, 229, 0.05);
+            --gradient-2: rgba(99, 102, 241, 0.05);
         }
 
         * {
@@ -29,8 +44,9 @@
             color: var(--text-primary);
             min-height: 100vh;
             background-image: 
-                radial-gradient(ellipse at top, rgba(0, 212, 170, 0.08) 0%, transparent 50%),
-                radial-gradient(ellipse at bottom right, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+                radial-gradient(ellipse at top, var(--gradient-1) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, var(--gradient-2) 0%, transparent 50%);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .container {
@@ -66,9 +82,10 @@
             gap: 1rem;
             margin-top: 2rem;
             flex-wrap: wrap;
+            align-items: center;
         }
 
-        nav a {
+        nav a, .theme-toggle {
             padding: 0.75rem 1.5rem;
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -77,12 +94,21 @@
             text-decoration: none;
             font-weight: 500;
             transition: all 0.3s ease;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 1rem;
         }
 
-        nav a:hover {
+        nav a:hover, .theme-toggle:hover {
             border-color: var(--accent);
             box-shadow: 0 0 20px var(--accent-glow);
             transform: translateY(-2px);
+        }
+
+        .theme-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
 
         .hero-stats {
@@ -153,7 +179,7 @@
 
         .item-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
         }
 
         .item-image {
@@ -180,7 +206,7 @@
         .item-category {
             display: inline-block;
             padding: 0.25rem 0.75rem;
-            background: rgba(0, 212, 170, 0.15);
+            background: var(--accent-glow);
             color: var(--accent);
             border-radius: 20px;
             font-size: 0.75rem;
@@ -244,6 +270,15 @@
             color: var(--accent);
             text-decoration: none;
         }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2rem;
+            }
+            .container {
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -256,6 +291,10 @@
                 <a href="/practice">📝 Practice</a>
                 <a href="/gallery">🖼️ Gallery</a>
                 <a href="/docs">📚 API Docs</a>
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <span id="theme-icon">🌙</span>
+                    <span id="theme-text">Dark</span>
+                </button>
             </nav>
         </header>
 
@@ -304,6 +343,36 @@
             <p>Built with ❤️ using <a href="https://fastapi.tiangolo.com" target="_blank">FastAPI</a></p>
         </footer>
     </div>
+
+    <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            
+            if (theme === 'dark') {
+                icon.textContent = '🌙';
+                text.textContent = 'Dark';
+            } else {
+                icon.textContent = '☀️';
+                text.textContent = 'Light';
+            }
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+    </script>
 </body>
 </html>
-

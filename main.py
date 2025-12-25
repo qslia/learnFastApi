@@ -13,7 +13,7 @@ import uuid
 
 # Initialize FastAPI app with metadata
 app = FastAPI(
-    title="FastAPI Demo Project",
+    title="English Speaking Practice",
     description="A complete FastAPI project demonstrating various features",
     version="1.0.0",
     docs_url="/docs",
@@ -142,6 +142,50 @@ users_db: dict[int, dict] = {
 item_id_counter = 3
 user_id_counter = 2
 
+# ============== Practice Sentences Database ==============
+sentences_db: list[dict] = [
+    {
+        "id": 141,
+        "chinese": "中国西南部的天气很特别。",
+        "hint": "The weather in... is very special/unique.",
+    },
+    {
+        "id": 142,
+        "chinese": "春天和秋天是最好的季节。",
+        "hint": "Spring and autumn are...",
+    },
+    {
+        "id": 143,
+        "chinese": "中国中部和东部的天气大不相同。",
+        "hint": "The weather in... is very different from...",
+    },
+    {
+        "id": 144,
+        "chinese": "暑假里我想和朋友们去旅行。",
+        "hint": "During summer vacation, I want to... with my friends.",
+    },
+    {
+        "id": 145,
+        "chinese": "在秋天野餐是令人愉快的。",
+        "hint": "Having a picnic in autumn is...",
+    },
+    {
+        "id": 146,
+        "chinese": "人们在这个季节喜欢参加什么活动?",
+        "hint": "What activities do people like to... in this season?",
+    },
+    {
+        "id": 147,
+        "chinese": "在六月，这儿经常下大雨。",
+        "hint": "In June, it often... here.",
+    },
+    {
+        "id": 148,
+        "chinese": "在这么热的天气里去游泳很凉爽。",
+        "hint": "It's refreshing/cool to... in such hot weather.",
+    },
+]
+
 
 # ============== HTML Page Endpoints ==============
 @app.get("/", response_class=HTMLResponse, tags=["Pages"])
@@ -151,7 +195,7 @@ async def home_page(request: Request):
         "index.html",
         {
             "request": request,
-            "title": "FastAPI Demo",
+            "title": "English Speaking Practice",
             "items": list(items_db.values()),
         },
     )
@@ -195,6 +239,19 @@ async def items_page(request: Request, category: Optional[str] = None):
             "items": items,
             "categories": [c.value for c in ItemCategory],
             "selected_category": category,
+        },
+    )
+
+
+@app.get("/practice", response_class=HTMLResponse, tags=["Pages"])
+async def practice_page(request: Request):
+    """English speaking practice page"""
+    return templates.TemplateResponse(
+        "practice.html",
+        {
+            "request": request,
+            "title": "English Speaking Practice",
+            "sentences": sentences_db,
         },
     )
 
@@ -439,6 +496,50 @@ async def search_items(
             results.append(item)
 
     return {"query": q, "count": len(results), "results": results}
+
+
+# ============== Sentence API Endpoints ==============
+class SentenceCreate(BaseModel):
+    id: int
+    chinese: str = Field(..., min_length=1)
+    hint: Optional[str] = None
+
+
+@app.get("/api/sentences", tags=["API - Sentences"])
+async def get_sentences():
+    """Get all practice sentences"""
+    return sentences_db
+
+
+@app.post("/api/sentences", tags=["API - Sentences"])
+async def create_sentence(sentence: SentenceCreate):
+    """Add a new practice sentence"""
+    # Check for duplicate ID
+    for s in sentences_db:
+        if s["id"] == sentence.id:
+            raise HTTPException(
+                status_code=400, detail=f"Sentence with id {sentence.id} already exists"
+            )
+
+    new_sentence = {
+        "id": sentence.id,
+        "chinese": sentence.chinese,
+        "hint": sentence.hint,
+    }
+    sentences_db.insert(0, new_sentence)  # Add to beginning
+    return new_sentence
+
+
+@app.delete("/api/sentences/{sentence_id}", tags=["API - Sentences"])
+async def delete_sentence(sentence_id: int):
+    """Delete a practice sentence"""
+    for i, s in enumerate(sentences_db):
+        if s["id"] == sentence_id:
+            sentences_db.pop(i)
+            return {"message": f"Sentence {sentence_id} deleted successfully"}
+    raise HTTPException(
+        status_code=404, detail=f"Sentence with id {sentence_id} not found"
+    )
 
 
 # ============== Stats Endpoint ==============

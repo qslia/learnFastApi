@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,6 +16,22 @@
             --text-primary: #ffffff;
             --text-secondary: #8b8b9e;
             --border: #2a2a3a;
+            --gradient-1: rgba(99, 102, 241, 0.1);
+            --gradient-2: rgba(0, 212, 170, 0.08);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --accent: #4f46e5;
+            --accent-secondary: #6366f1;
+            --accent-glow: rgba(79, 70, 229, 0.15);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+            --gradient-1: rgba(79, 70, 229, 0.05);
+            --gradient-2: rgba(99, 102, 241, 0.05);
         }
 
         * {
@@ -30,8 +46,9 @@
             color: var(--text-primary);
             min-height: 100vh;
             background-image: 
-                radial-gradient(ellipse at top right, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
-                radial-gradient(ellipse at bottom left, rgba(0, 212, 170, 0.08) 0%, transparent 50%);
+                radial-gradient(ellipse at top right, var(--gradient-1) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom left, var(--gradient-2) 0%, transparent 50%);
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .container {
@@ -44,17 +61,43 @@
             margin-bottom: 2rem;
         }
 
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
         .back-link {
             display: inline-flex;
             align-items: center;
             gap: 0.5rem;
             color: var(--text-secondary);
             text-decoration: none;
-            margin-bottom: 1rem;
             transition: color 0.3s ease;
         }
 
         .back-link:hover {
+            color: var(--accent);
+        }
+
+        .theme-toggle {
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent);
             color: var(--accent);
         }
 
@@ -84,7 +127,7 @@
 
         .upload-section.dragover {
             border-color: var(--accent);
-            background: rgba(0, 212, 170, 0.05);
+            background: var(--accent-glow);
         }
 
         .upload-icon {
@@ -174,7 +217,7 @@
 
         .gallery-item:hover {
             transform: scale(1.02);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
         }
 
         .gallery-item img {
@@ -200,7 +243,7 @@
 
         .gallery-item-name {
             font-size: 0.85rem;
-            color: var(--text-primary);
+            color: #ffffff;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -217,7 +260,7 @@
             background: rgba(255, 255, 255, 0.1);
             border: none;
             border-radius: 6px;
-            color: var(--text-primary);
+            color: #ffffff;
             font-size: 0.75rem;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -225,7 +268,7 @@
 
         .action-btn:hover {
             background: var(--accent);
-            color: var(--bg-primary);
+            color: white;
         }
 
         .action-btn.delete:hover {
@@ -284,12 +327,30 @@
         .lightbox-close:hover {
             opacity: 1;
         }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 1rem;
+            }
+            h1 {
+                font-size: 1.75rem;
+            }
+            .upload-section {
+                padding: 2rem 1rem;
+            }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <a href="/" class="back-link">← Back to Home</a>
+            <div class="header-top">
+                <a href="/" class="back-link">← Back to Home</a>
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <span id="theme-icon">🌙</span>
+                    <span id="theme-text">Dark</span>
+                </button>
+            </div>
             <h1>🖼️ {{ title }}</h1>
             <p class="subtitle">Upload and manage your images</p>
         </header>
@@ -340,6 +401,35 @@
     </div>
 
     <script>
+        // Theme toggle functionality
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            
+            if (theme === 'dark') {
+                icon.textContent = '🌙';
+                text.textContent = 'Dark';
+            } else {
+                icon.textContent = '☀️';
+                text.textContent = 'Light';
+            }
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const uploadStatus = document.getElementById('upload-status');
@@ -434,4 +524,3 @@
     </script>
 </body>
 </html>
-
