@@ -35,10 +35,13 @@ from database import (
     Post as DBPost,
     PostLike as DBPostLike,
     Sentence as DBSentence,
+    PracticeRecord as DBPracticeRecord,
+    DailyStreak as DBDailyStreak,
     get_db,
     create_tables,
     init_demo_data,
 )
+from datetime import date
 
 # Initialize FastAPI app with metadata
 app = FastAPI(
@@ -1019,6 +1022,173 @@ async def delete_sentence(sentence_id: int, db: DBSession = Depends(get_db)):
     db.delete(sentence)
     db.commit()
     return {"message": f"Sentence {sentence_id} deleted successfully"}
+
+
+# ============== Practice Statistics API Endpoints ==============
+class PracticeRecordCreate(BaseModel):
+    sentence_id: int
+
+
+@app.post("/api/practice/record", tags=["API - Practice Stats"])
+async def record_practice(
+    record: PracticeRecordCreate,
+    request: Request,
+    db: DBSession = Depends(get_db),
+):
+    """Record that a user practiced a sentence today"""
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="You must be logged in to track practice")
+
+    today = date.today()
+    
+    # Check if already recorded today
+    existing = db.query(DBPracticeRecord).filter(
+        DBPracticeRecord.user_id == user.id,
+        DBPracticeRecord.sentence_id == record.sentence_id,
+        DBPracticeRecord.practice_date == today,
+    ).first()
+    
+    if not existing:
+        # Create new practice record
+        new_record = DBPracticeRecord(
+            user_id=user.id,
+            sentence_id=record.sentence_id,
+            practice_date=today,
+            completed=True,
+        )
+        db.add(new_record)
+        
+        # Update or create streak
+        streak = db.query(DBDailyStreak).filter(DBDailyStreak.user_id == user.id).first()
+        if not streak:
+            streak = DBDailyStreak(user_id=user.id)
+            db.add(streak)
+        
+        # Update streak statistics
+        streak.total_sentences_practiced += 1
+        
+        # Check if this is a new day of practice
+        if streak.last_practice_date != today:
+            streak.total_practice_days += 1
+            
+            # Update streak
+            if streak.last_practice_date:
+                days_diff = (today - streak.last_practice_date).days
+                if days_diff == 1:
+                    # Consecutive day
+                    streak.current_streak += 1
+                elif days_diff > 1:
+                    # Streak broken
+                    streak.current_streak = 1
+            else:
+                streak.current_streak = 1
+            
+            # Update longest streak
+            if streak.current_streak > streak.longest_streak:
+                streak.longest_streak = streak.current_streak
+            
+            streak.last_practice_date = today
+        
+        db.commit()
+    
+    return {"message": "Practice recorded", "date": str(today)}
+
+
+@app.get("/api/practice/stats", tags=["API - Practice Stats"])
+async def get_practice_stats(
+    request: Request,
+    db: DBSession = Depends(get_db),
+):
+    """Get user's practice statistics"""
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="You must be logged in to view stats")
+
+    today = date.today()
+    
+    # Get streak info
+    streak = db.query(DBDailyStreak).filter(DBDailyStreak.user_id == user.id).first()
+    
+    # Get today's practice count
+    today_count = db.query(DBPracticeRecord).filter(
+        DBPracticeRecord.user_id == user.id,
+        DBPracticeRecord.practice_date == today,
+    ).count()
+    
+    # Get practiced sentence IDs for today
+    today_practiced = db.query(DBPracticeRecord.sentence_id).filter(
+        DBPracticeRecord.user_id == user.id,
+        DBPracticeRecord.practice_date == today,
+    ).all()
+    today_sentence_ids = [r[0] for r in today_practiced]
+    
+    # Get total sentences
+    total_sentences = db.query(DBSentence).count()
+    
+    # Get practice history for last 7 days
+    from datetime import timedelta
+    history = []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        count = db.query(DBPracticeRecord).filter(
+            DBPracticeRecord.user_id == user.id,
+            DBPracticeRecord.practice_date == day,
+        ).count()
+        history.append({
+            "date": str(day),
+            "day_name": day.strftime("%a"),
+            "count": count,
+        })
+    
+    return {
+        "today_date": str(today),
+        "today_practiced": today_count,
+        "today_sentence_ids": today_sentence_ids,
+        "total_sentences": total_sentences,
+        "current_streak": streak.current_streak if streak else 0,
+        "longest_streak": streak.longest_streak if streak else 0,
+        "total_practice_days": streak.total_practice_days if streak else 0,
+        "total_sentences_practiced": streak.total_sentences_practiced if streak else 0,
+        "last_7_days": history,
+    }
+
+
+@app.get("/api/practice/history", tags=["API - Practice Stats"])
+async def get_practice_history(
+    request: Request,
+    days: int = Query(30, ge=1, le=365),
+    db: DBSession = Depends(get_db),
+):
+    """Get user's practice history for specified number of days"""
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="You must be logged in to view history")
+
+    today = date.today()
+    from datetime import timedelta
+    start_date = today - timedelta(days=days-1)
+    
+    # Get all practice records in date range
+    records = db.query(DBPracticeRecord).filter(
+        DBPracticeRecord.user_id == user.id,
+        DBPracticeRecord.practice_date >= start_date,
+    ).all()
+    
+    # Group by date
+    history = {}
+    for record in records:
+        date_str = str(record.practice_date)
+        if date_str not in history:
+            history[date_str] = {"date": date_str, "count": 0, "sentence_ids": []}
+        history[date_str]["count"] += 1
+        history[date_str]["sentence_ids"].append(record.sentence_id)
+    
+    return {
+        "start_date": str(start_date),
+        "end_date": str(today),
+        "history": list(history.values()),
+    }
 
 
 # ============== Stats Endpoint ==============

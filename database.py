@@ -12,10 +12,12 @@ from sqlalchemy import (
     DateTime,
     Text,
     ForeignKey,
+    Date,
+    UniqueConstraint,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
-from datetime import datetime
+from datetime import datetime, date
 import os
 
 # Database URL - PostgreSQL for production
@@ -138,6 +140,44 @@ class Sentence(Base):
     chinese = Column(Text, nullable=False)
     hint = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class PracticeRecord(Base):
+    """Track user practice statistics by date"""
+
+    __tablename__ = "practice_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    sentence_id = Column(Integer, ForeignKey("sentences.id"), nullable=False)
+    practice_date = Column(Date, default=date.today, index=True)
+    completed = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Unique constraint: one record per user per sentence per day
+    __table_args__ = (
+        UniqueConstraint('user_id', 'sentence_id', 'practice_date', name='unique_daily_practice'),
+    )
+
+    # Relationships
+    user = relationship("User", backref="practice_records")
+
+
+class DailyStreak(Base):
+    """Track user's daily practice streak"""
+
+    __tablename__ = "daily_streaks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    current_streak = Column(Integer, default=0)
+    longest_streak = Column(Integer, default=0)
+    last_practice_date = Column(Date, nullable=True)
+    total_practice_days = Column(Integer, default=0)
+    total_sentences_practiced = Column(Integer, default=0)
+
+    # Relationships
+    user = relationship("User", backref="streak")
 
 
 # ============== Database Utilities ==============
