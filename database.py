@@ -3,29 +3,51 @@ Database configuration for production deployment.
 Uses SQLAlchemy with support for PostgreSQL (production) or SQLite (development).
 """
 
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import (
+    create_engine,
+    Column,
+    Integer,
+    String,
+    Boolean,
+    DateTime,
+    Text,
+    ForeignKey,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 import os
 
-# Database URL - Use PostgreSQL in production, SQLite for development
-# Set DATABASE_URL environment variable in production
+# Database URL - PostgreSQL for production
+# IMPORTANT: Using psycopg3 driver (postgresql+psycopg) to fix Windows Unicode issues
+#
+# Connection string format:
+#   postgresql+psycopg://USERNAME:PASSWORD@HOST:PORT/DATABASE
+#
+# ⚠️  CHANGE THE PASSWORD BELOW to match your PostgreSQL installation password!
+#
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "sqlite:///./app.db"  # Default to SQLite for local development
+    "postgresql+psycopg://postgres:a123@localhost:5432/english_practice",
+    #                             ^^^^^^^^^^^^^^^^^
+    #                             Replace with your actual PostgreSQL password!
 )
 
-# Fix for some cloud providers that use "postgres://" instead of "postgresql://"
+# Fix for cloud providers and ensure psycopg3 driver is used
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and "+psycopg" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
 
-# Create engine
+print(f"🐘 Connecting to PostgreSQL: {DATABASE_URL.split('@')[-1]}")
+
+# Create engine with connection pooling for production scale
 engine = create_engine(
     DATABASE_URL,
-    # SQLite needs check_same_thread=False
-    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
-    pool_pre_ping=True,  # Verify connections before using
+    pool_size=20,  # Number of persistent connections
+    max_overflow=30,  # Extra connections when needed
+    pool_pre_ping=True,  # Verify connections before use
+    pool_recycle=3600,  # Recycle connections after 1 hour
 )
 
 # Session factory
@@ -37,8 +59,10 @@ Base = declarative_base()
 
 # ============== Database Models ==============
 
+
 class User(Base):
     """User account model"""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -48,14 +72,19 @@ class User(Base):
     full_name = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
-    posts = relationship("Post", back_populates="author_user", cascade="all, delete-orphan")
-    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    posts = relationship(
+        "Post", back_populates="author_user", cascade="all, delete-orphan"
+    )
+    sessions = relationship(
+        "Session", back_populates="user", cascade="all, delete-orphan"
+    )
 
 
 class Session(Base):
     """User session model for authentication"""
+
     __tablename__ = "sessions"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -63,13 +92,14 @@ class Session(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
-    
+
     # Relationships
     user = relationship("User", back_populates="sessions")
 
 
 class Post(Base):
     """Community post model"""
+
     __tablename__ = "posts"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -77,27 +107,31 @@ class Post(Base):
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     likes = Column(Integer, default=0)
-    
+
     # Relationships
     author_user = relationship("User", back_populates="posts")
-    post_likes = relationship("PostLike", back_populates="post", cascade="all, delete-orphan")
+    post_likes = relationship(
+        "PostLike", back_populates="post", cascade="all, delete-orphan"
+    )
 
 
 class PostLike(Base):
     """Track which users liked which posts"""
+
     __tablename__ = "post_likes"
 
     id = Column(Integer, primary_key=True, index=True)
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     post = relationship("Post", back_populates="post_likes")
 
 
 class Sentence(Base):
     """Practice sentence model"""
+
     __tablename__ = "sentences"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -107,6 +141,7 @@ class Sentence(Base):
 
 
 # ============== Database Utilities ==============
+
 
 def create_tables():
     """Create all database tables"""
@@ -134,7 +169,7 @@ def init_demo_data(db):
     demo_user = db.query(User).filter(User.username == "demo").first()
     if not demo_user:
         import hashlib
-        
+
         # Create demo user
         demo_user = User(
             username="demo",
@@ -146,7 +181,7 @@ def init_demo_data(db):
         db.add(demo_user)
         db.commit()
         db.refresh(demo_user)
-        
+
         # Create demo posts
         posts = [
             Post(
@@ -166,21 +201,53 @@ def init_demo_data(db):
             ),
         ]
         db.add_all(posts)
-        
+
         # Create demo sentences
         sentences = [
-            Sentence(id=141, chinese="中国西南部的天气很特别。", hint="The weather in... is very special/unique."),
-            Sentence(id=142, chinese="春天和秋天是最好的季节。", hint="Spring and autumn are..."),
-            Sentence(id=143, chinese="中国中部和东部的天气大不相同。", hint="The weather in... is very different from..."),
-            Sentence(id=144, chinese="暑假里我想和朋友们去旅行。", hint="During summer vacation, I want to... with my friends."),
-            Sentence(id=145, chinese="在秋天野餐是令人愉快的。", hint="Having a picnic in autumn is..."),
-            Sentence(id=146, chinese="人们在这个季节喜欢参加什么活动?", hint="What activities do people like to... in this season?"),
-            Sentence(id=147, chinese="在六月，这儿经常下大雨。", hint="In June, it often... here."),
-            Sentence(id=148, chinese="在这么热的天气里去游泳很凉爽。", hint="It's refreshing/cool to... in such hot weather."),
+            Sentence(
+                id=141,
+                chinese="中国西南部的天气很特别。",
+                hint="The weather in... is very special/unique.",
+            ),
+            Sentence(
+                id=142,
+                chinese="春天和秋天是最好的季节。",
+                hint="Spring and autumn are...",
+            ),
+            Sentence(
+                id=143,
+                chinese="中国中部和东部的天气大不相同。",
+                hint="The weather in... is very different from...",
+            ),
+            Sentence(
+                id=144,
+                chinese="暑假里我想和朋友们去旅行。",
+                hint="During summer vacation, I want to... with my friends.",
+            ),
+            Sentence(
+                id=145,
+                chinese="在秋天野餐是令人愉快的。",
+                hint="Having a picnic in autumn is...",
+            ),
+            Sentence(
+                id=146,
+                chinese="人们在这个季节喜欢参加什么活动?",
+                hint="What activities do people like to... in this season?",
+            ),
+            Sentence(
+                id=147,
+                chinese="在六月，这儿经常下大雨。",
+                hint="In June, it often... here.",
+            ),
+            Sentence(
+                id=148,
+                chinese="在这么热的天气里去游泳很凉爽。",
+                hint="It's refreshing/cool to... in such hot weather.",
+            ),
         ]
         db.add_all(sentences)
         db.commit()
-        
+
         print("✅ Demo data initialized!")
 
 
@@ -189,9 +256,8 @@ if __name__ == "__main__":
     print("Creating database tables...")
     create_tables()
     print("✅ Tables created!")
-    
+
     # Initialize demo data
     db = SessionLocal()
     init_demo_data(db)
     db.close()
-

@@ -14,7 +14,7 @@ python-multipart==0.0.18
 
 # Database
 sqlalchemy==2.0.36
-psycopg2-binary==2.9.10  # PostgreSQL driver
+psycopg[binary]==3.3.2  # Modern PostgreSQL driver (better Unicode support)
 alembic==1.14.0  # Database migrations
 
 # Session/Cache (optional, for production)

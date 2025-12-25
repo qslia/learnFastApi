@@ -18,11 +18,27 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
 from datetime import datetime, timedelta
 from enum import Enum
+from sqlalchemy.orm import Session as DBSession
 import os
 import shutil
 import uuid
 import hashlib
 import secrets
+
+# Import database models and utilities
+from database import (
+    engine,
+    SessionLocal,
+    Base,
+    User as DBUser,
+    Session as DBSessionModel,
+    Post as DBPost,
+    PostLike as DBPostLike,
+    Sentence as DBSentence,
+    get_db,
+    create_tables,
+    init_demo_data,
+)
 
 # Initialize FastAPI app with metadata
 app = FastAPI(
@@ -54,7 +70,22 @@ app.add_middleware(
 )
 
 # ============== Secret Key for Sessions ==============
-SECRET_KEY = secrets.token_hex(32)
+SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
+
+
+# ============== Startup Event ==============
+@app.on_event("startup")
+def startup_event():
+    """Initialize database on startup"""
+    print("🚀 Starting up...")
+    create_tables()
+    # Initialize demo data
+    db = SessionLocal()
+    try:
+        init_demo_data(db)
+    finally:
+        db.close()
+    print("✅ Database ready!")
 
 
 # ============== Enums ==============
@@ -143,7 +174,7 @@ class AuthUser(BaseModel):
     created_at: datetime
 
 
-# ============== In-Memory Database ==============
+# ============== In-Memory Database (for items only - not auth) ==============
 items_db: dict[int, dict] = {
     1: {
         "id": 1,
@@ -177,101 +208,8 @@ users_db: dict[int, dict] = {
     }
 }
 
-# Auth users database (with passwords)
-auth_users_db: dict[str, dict] = {
-    "demo": {
-        "id": 1,
-        "username": "demo",
-        "email": "demo@example.com",
-        "password_hash": hashlib.sha256("demo123".encode()).hexdigest(),
-        "full_name": "Demo User",
-        "is_active": True,
-        "created_at": datetime.now(),
-    }
-}
-
-# Session storage (in production, use Redis or database)
-sessions_db: dict[str, dict] = {}
-
 item_id_counter = 3
 user_id_counter = 2
-auth_user_id_counter = 2
-post_id_counter = 4
-
-# ============== Community Posts Database ==============
-posts_db: list[dict] = [
-    {
-        "id": 1,
-        "author": "demo",
-        "author_name": "Demo User",
-        "content": "Welcome to the English Speaking Practice community! 🎉 Feel free to share your learning progress, ask questions, or help others.",
-        "created_at": datetime.now() - timedelta(hours=5),
-        "likes": 12,
-        "liked_by": ["demo"],
-    },
-    {
-        "id": 2,
-        "author": "demo",
-        "author_name": "Demo User",
-        "content": "今天学了一个新句子：The weather in southwest China is very special. 西南部的天气真的很特别！",
-        "created_at": datetime.now() - timedelta(hours=2),
-        "likes": 5,
-        "liked_by": [],
-    },
-    {
-        "id": 3,
-        "author": "demo",
-        "author_name": "Demo User",
-        "content": "Does anyone have tips for remembering vocabulary? I keep forgetting new words after a few days. 😅",
-        "created_at": datetime.now() - timedelta(minutes=30),
-        "likes": 3,
-        "liked_by": [],
-    },
-]
-
-# ============== Practice Sentences Database ==============
-sentences_db: list[dict] = [
-    {
-        "id": 141,
-        "chinese": "中国西南部的天气很特别。",
-        "hint": "The weather in... is very special/unique.",
-    },
-    {
-        "id": 142,
-        "chinese": "春天和秋天是最好的季节。",
-        "hint": "Spring and autumn are...",
-    },
-    {
-        "id": 143,
-        "chinese": "中国中部和东部的天气大不相同。",
-        "hint": "The weather in... is very different from...",
-    },
-    {
-        "id": 144,
-        "chinese": "暑假里我想和朋友们去旅行。",
-        "hint": "During summer vacation, I want to... with my friends.",
-    },
-    {
-        "id": 145,
-        "chinese": "在秋天野餐是令人愉快的。",
-        "hint": "Having a picnic in autumn is...",
-    },
-    {
-        "id": 146,
-        "chinese": "人们在这个季节喜欢参加什么活动?",
-        "hint": "What activities do people like to... in this season?",
-    },
-    {
-        "id": 147,
-        "chinese": "在六月，这儿经常下大雨。",
-        "hint": "In June, it often... here.",
-    },
-    {
-        "id": 148,
-        "chinese": "在这么热的天气里去游泳很凉爽。",
-        "hint": "It's refreshing/cool to... in such hot weather.",
-    },
-]
 
 
 # ============== Auth Helper Functions ==============
@@ -285,50 +223,74 @@ def verify_password(password: str, password_hash: str) -> bool:
     return hash_password(password) == password_hash
 
 
-def create_session(user_id: int, username: str) -> str:
-    """Create a new session and return the session token"""
+def create_session(db: DBSession, user_id: int, username: str) -> str:
+    """Create a new session in database and return the session token"""
     session_token = secrets.token_urlsafe(32)
-    sessions_db[session_token] = {
-        "user_id": user_id,
-        "username": username,
-        "created_at": datetime.now(),
-        "expires_at": datetime.now() + timedelta(days=7),
-    }
+    expires_at = datetime.now() + timedelta(days=7)
+
+    db_session = DBSessionModel(
+        token=session_token,
+        user_id=user_id,
+        expires_at=expires_at,
+    )
+    db.add(db_session)
+    db.commit()
+
     return session_token
 
 
-def get_session(session_token: str) -> Optional[dict]:
+def get_session(db: DBSession, session_token: str) -> Optional[DBSessionModel]:
     """Get session data from token"""
     if not session_token:
         return None
-    session = sessions_db.get(session_token)
-    if session and session["expires_at"] > datetime.now():
+
+    session = (
+        db.query(DBSessionModel).filter(DBSessionModel.token == session_token).first()
+    )
+
+    if session and session.expires_at > datetime.now():
         return session
     elif session:
         # Session expired, remove it
-        del sessions_db[session_token]
+        db.delete(session)
+        db.commit()
+
     return None
 
 
-def get_current_user(request: Request) -> Optional[dict]:
+def get_current_user(request: Request, db: DBSession) -> Optional[DBUser]:
     """Get current user from session cookie"""
     session_token = request.cookies.get("session_token")
     if not session_token:
         return None
-    session = get_session(session_token)
+
+    session = get_session(db, session_token)
     if not session:
         return None
-    username = session.get("username")
-    return auth_users_db.get(username)
+
+    return db.query(DBUser).filter(DBUser.id == session.user_id).first()
+
+
+def delete_session(db: DBSession, session_token: str):
+    """Delete a session from database"""
+    session = (
+        db.query(DBSessionModel).filter(DBSessionModel.token == session_token).first()
+    )
+    if session:
+        db.delete(session)
+        db.commit()
 
 
 # ============== Auth Page Endpoints ==============
 @app.get("/login", response_class=HTMLResponse, tags=["Auth Pages"])
 async def login_page(
-    request: Request, error: Optional[str] = None, message: Optional[str] = None
+    request: Request,
+    error: Optional[str] = None,
+    message: Optional[str] = None,
+    db: DBSession = Depends(get_db),
 ):
     """Login page"""
-    user = get_current_user(request)
+    user = get_current_user(request, db)
     if user:
         return RedirectResponse(url="/", status_code=302)
 
@@ -344,9 +306,13 @@ async def login_page(
 
 
 @app.get("/signup", response_class=HTMLResponse, tags=["Auth Pages"])
-async def signup_page(request: Request, error: Optional[str] = None):
+async def signup_page(
+    request: Request,
+    error: Optional[str] = None,
+    db: DBSession = Depends(get_db),
+):
     """Signup page"""
-    user = get_current_user(request)
+    user = get_current_user(request, db)
     if user:
         return RedirectResponse(url="/", status_code=302)
 
@@ -366,24 +332,26 @@ async def login(
     response: Response,
     username: str = Form(...),
     password: str = Form(...),
+    db: DBSession = Depends(get_db),
 ):
     """Process login form"""
-    user = auth_users_db.get(username)
+    # Find user in database
+    user = db.query(DBUser).filter(DBUser.username == username).first()
 
-    if not user or not verify_password(password, user["password_hash"]):
+    if not user or not verify_password(password, user.password_hash):
         return RedirectResponse(
             url="/login?error=Invalid username or password",
             status_code=302,
         )
 
-    if not user["is_active"]:
+    if not user.is_active:
         return RedirectResponse(
             url="/login?error=Account is disabled",
             status_code=302,
         )
 
-    # Create session
-    session_token = create_session(user["id"], username)
+    # Create session in database
+    session_token = create_session(db, user.id, username)
 
     # Redirect to home with session cookie
     response = RedirectResponse(url="/", status_code=302)
@@ -404,24 +372,24 @@ async def signup(
     email: str = Form(...),
     password: str = Form(...),
     full_name: str = Form(None),
+    db: DBSession = Depends(get_db),
 ):
     """Process signup form"""
-    global auth_user_id_counter
-
     # Check if username exists
-    if username in auth_users_db:
+    existing_user = db.query(DBUser).filter(DBUser.username == username).first()
+    if existing_user:
         return RedirectResponse(
             url="/signup?error=Username already exists",
             status_code=302,
         )
 
     # Check if email exists
-    for user in auth_users_db.values():
-        if user["email"] == email:
-            return RedirectResponse(
-                url="/signup?error=Email already registered",
-                status_code=302,
-            )
+    existing_email = db.query(DBUser).filter(DBUser.email == email).first()
+    if existing_email:
+        return RedirectResponse(
+            url="/signup?error=Email already registered",
+            status_code=302,
+        )
 
     # Validate password length
     if len(password) < 6:
@@ -430,17 +398,16 @@ async def signup(
             status_code=302,
         )
 
-    # Create new user
-    auth_users_db[username] = {
-        "id": auth_user_id_counter,
-        "username": username,
-        "email": email,
-        "password_hash": hash_password(password),
-        "full_name": full_name or username,
-        "is_active": True,
-        "created_at": datetime.now(),
-    }
-    auth_user_id_counter += 1
+    # Create new user in database
+    new_user = DBUser(
+        username=username,
+        email=email,
+        password_hash=hash_password(password),
+        full_name=full_name or username,
+        is_active=True,
+    )
+    db.add(new_user)
+    db.commit()
 
     return RedirectResponse(
         url="/login?message=Account created successfully! Please login.",
@@ -449,11 +416,11 @@ async def signup(
 
 
 @app.get("/logout", tags=["Auth"])
-async def logout(request: Request):
+async def logout(request: Request, db: DBSession = Depends(get_db)):
     """Logout and clear session"""
     session_token = request.cookies.get("session_token")
-    if session_token and session_token in sessions_db:
-        del sessions_db[session_token]
+    if session_token:
+        delete_session(db, session_token)
 
     response = RedirectResponse(
         url="/login?message=Logged out successfully", status_code=302
@@ -463,42 +430,70 @@ async def logout(request: Request):
 
 
 @app.get("/profile", response_class=HTMLResponse, tags=["Auth Pages"])
-async def profile_page(request: Request):
+async def profile_page(request: Request, db: DBSession = Depends(get_db)):
     """User profile page"""
-    user = get_current_user(request)
+    user = get_current_user(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=302)
+
+    # Convert SQLAlchemy model to dict for template
+    user_dict = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "full_name": user.full_name,
+        "is_active": user.is_active,
+        "created_at": user.created_at,
+    }
 
     return templates.TemplateResponse(
         "profile.html",
         {
             "request": request,
             "title": "Profile",
-            "user": user,
+            "user": user_dict,
         },
     )
 
 
 # ============== HTML Page Endpoints ==============
 @app.get("/", response_class=HTMLResponse, tags=["Pages"])
-async def home_page(request: Request):
+async def home_page(request: Request, db: DBSession = Depends(get_db)):
     """Home page with HTML template"""
-    user = get_current_user(request)
+    user = get_current_user(request, db)
+    user_dict = None
+    if user:
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+        }
+
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
             "title": "English Speaking Practice",
             "items": list(items_db.values()),
-            "user": user,
+            "user": user_dict,
         },
     )
 
 
 @app.get("/gallery", response_class=HTMLResponse, tags=["Pages"])
-async def gallery_page(request: Request):
+async def gallery_page(request: Request, db: DBSession = Depends(get_db)):
     """Image gallery page"""
-    user = get_current_user(request)
+    user = get_current_user(request, db)
+    user_dict = None
+    if user:
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+        }
+
     # Get all uploaded images
     upload_dir = "static/uploads"
     images = []
@@ -515,15 +510,28 @@ async def gallery_page(request: Request):
             "request": request,
             "title": "Image Gallery",
             "images": images,
-            "user": user,
+            "user": user_dict,
         },
     )
 
 
 @app.get("/items-page", response_class=HTMLResponse, tags=["Pages"])
-async def items_page(request: Request, category: Optional[str] = None):
+async def items_page(
+    request: Request,
+    category: Optional[str] = None,
+    db: DBSession = Depends(get_db),
+):
     """Items listing page with optional category filter"""
-    user = get_current_user(request)
+    user = get_current_user(request, db)
+    user_dict = None
+    if user:
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+        }
+
     items = list(items_db.values())
     if category:
         items = [item for item in items if item["category"] == category]
@@ -536,39 +544,87 @@ async def items_page(request: Request, category: Optional[str] = None):
             "items": items,
             "categories": [c.value for c in ItemCategory],
             "selected_category": category,
-            "user": user,
+            "user": user_dict,
         },
     )
 
 
 @app.get("/practice", response_class=HTMLResponse, tags=["Pages"])
-async def practice_page(request: Request):
+async def practice_page(request: Request, db: DBSession = Depends(get_db)):
     """English speaking practice page"""
-    user = get_current_user(request)
+    user = get_current_user(request, db)
+    user_dict = None
+    if user:
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+        }
+
+    # Get sentences from database
+    sentences = db.query(DBSentence).order_by(DBSentence.id).all()
+    sentences_list = [
+        {"id": s.id, "chinese": s.chinese, "hint": s.hint} for s in sentences
+    ]
+
     return templates.TemplateResponse(
         "practice.html",
         {
             "request": request,
             "title": "English Speaking Practice",
-            "sentences": sentences_db,
-            "user": user,
+            "sentences": sentences_list,
+            "user": user_dict,
         },
     )
 
 
 @app.get("/community", response_class=HTMLResponse, tags=["Pages"])
-async def community_page(request: Request):
+async def community_page(request: Request, db: DBSession = Depends(get_db)):
     """Community posts page"""
-    user = get_current_user(request)
-    # Sort posts by created_at descending (newest first)
-    sorted_posts = sorted(posts_db, key=lambda x: x["created_at"], reverse=True)
+    user = get_current_user(request, db)
+    user_dict = None
+    if user:
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+        }
+
+    # Get posts from database with author info
+    posts = db.query(DBPost).order_by(DBPost.created_at.desc()).all()
+    posts_list = []
+    for post in posts:
+        # Get likes for this post by current user
+        liked_by_current_user = False
+        if user:
+            like = (
+                db.query(DBPostLike)
+                .filter(DBPostLike.post_id == post.id, DBPostLike.user_id == user.id)
+                .first()
+            )
+            liked_by_current_user = like is not None
+
+        posts_list.append(
+            {
+                "id": post.id,
+                "author": post.author_user.username,
+                "author_name": post.author_user.full_name or post.author_user.username,
+                "content": post.content,
+                "created_at": post.created_at,
+                "likes": post.likes,
+                "liked_by_current_user": liked_by_current_user,
+            }
+        )
+
     return templates.TemplateResponse(
         "community.html",
         {
             "request": request,
             "title": "Community",
-            "posts": sorted_posts,
-            "user": user,
+            "posts": posts_list,
+            "user": user_dict,
         },
     )
 
@@ -579,78 +635,114 @@ class PostCreate(BaseModel):
 
 
 @app.get("/api/posts", tags=["API - Community"])
-async def get_posts():
+async def get_posts(db: DBSession = Depends(get_db)):
     """Get all community posts"""
-    sorted_posts = sorted(posts_db, key=lambda x: x["created_at"], reverse=True)
-    return sorted_posts
+    posts = db.query(DBPost).order_by(DBPost.created_at.desc()).all()
+    return [
+        {
+            "id": post.id,
+            "author": post.author_user.username,
+            "author_name": post.author_user.full_name or post.author_user.username,
+            "content": post.content,
+            "created_at": post.created_at,
+            "likes": post.likes,
+        }
+        for post in posts
+    ]
 
 
 @app.post("/api/posts", tags=["API - Community"])
-async def create_post(request: Request, post: PostCreate):
+async def create_post(
+    request: Request,
+    post: PostCreate,
+    db: DBSession = Depends(get_db),
+):
     """Create a new community post"""
-    global post_id_counter
-
-    user = get_current_user(request)
+    user = get_current_user(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="You must be logged in to post")
 
-    new_post = {
-        "id": post_id_counter,
-        "author": user["username"],
-        "author_name": user["full_name"] or user["username"],
-        "content": post.content,
-        "created_at": datetime.now(),
-        "likes": 0,
-        "liked_by": [],
-    }
-    posts_db.insert(0, new_post)
-    post_id_counter += 1
+    new_post = DBPost(
+        author_id=user.id,
+        content=post.content,
+        likes=0,
+    )
+    db.add(new_post)
+    db.commit()
+    db.refresh(new_post)
 
-    return new_post
+    return {
+        "id": new_post.id,
+        "author": user.username,
+        "author_name": user.full_name or user.username,
+        "content": new_post.content,
+        "created_at": new_post.created_at,
+        "likes": new_post.likes,
+    }
 
 
 @app.post("/api/posts/{post_id}/like", tags=["API - Community"])
-async def like_post(request: Request, post_id: int):
+async def like_post(
+    request: Request,
+    post_id: int,
+    db: DBSession = Depends(get_db),
+):
     """Like or unlike a post"""
-    user = get_current_user(request)
+    user = get_current_user(request, db)
     if not user:
         raise HTTPException(
             status_code=401, detail="You must be logged in to like posts"
         )
 
-    for post in posts_db:
-        if post["id"] == post_id:
-            if user["username"] in post["liked_by"]:
-                # Unlike
-                post["liked_by"].remove(user["username"])
-                post["likes"] -= 1
-                return {"liked": False, "likes": post["likes"]}
-            else:
-                # Like
-                post["liked_by"].append(user["username"])
-                post["likes"] += 1
-                return {"liked": True, "likes": post["likes"]}
+    post = db.query(DBPost).filter(DBPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
 
-    raise HTTPException(status_code=404, detail="Post not found")
+    # Check if user already liked this post
+    existing_like = (
+        db.query(DBPostLike)
+        .filter(DBPostLike.post_id == post_id, DBPostLike.user_id == user.id)
+        .first()
+    )
+
+    if existing_like:
+        # Unlike
+        db.delete(existing_like)
+        post.likes = max(0, post.likes - 1)
+        db.commit()
+        return {"liked": False, "likes": post.likes}
+    else:
+        # Like
+        new_like = DBPostLike(post_id=post_id, user_id=user.id)
+        db.add(new_like)
+        post.likes += 1
+        db.commit()
+        return {"liked": True, "likes": post.likes}
 
 
 @app.delete("/api/posts/{post_id}", tags=["API - Community"])
-async def delete_post(request: Request, post_id: int):
+async def delete_post(
+    request: Request,
+    post_id: int,
+    db: DBSession = Depends(get_db),
+):
     """Delete a post (only author can delete)"""
-    user = get_current_user(request)
+    user = get_current_user(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="You must be logged in")
 
-    for i, post in enumerate(posts_db):
-        if post["id"] == post_id:
-            if post["author"] != user["username"]:
-                raise HTTPException(
-                    status_code=403, detail="You can only delete your own posts"
-                )
-            posts_db.pop(i)
-            return {"message": "Post deleted successfully"}
+    post = db.query(DBPost).filter(DBPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
 
-    raise HTTPException(status_code=404, detail="Post not found")
+    if post.author_id != user.id:
+        raise HTTPException(
+            status_code=403, detail="You can only delete your own posts"
+        )
+
+    db.delete(post)
+    db.commit()
+    return {"message": "Post deleted successfully"}
 
 
 # ============== Image Upload Endpoints ==============
@@ -747,16 +839,16 @@ async def health_check():
 
 # ============== Auth API Endpoints ==============
 @app.get("/api/auth/me", tags=["API - Auth"])
-async def get_current_user_api(request: Request):
+async def get_current_user_api(request: Request, db: DBSession = Depends(get_db)):
     """Get current logged in user"""
-    user = get_current_user(request)
+    user = get_current_user(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return {
-        "id": user["id"],
-        "username": user["username"],
-        "email": user["email"],
-        "full_name": user["full_name"],
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "full_name": user.full_name,
     }
 
 
@@ -918,45 +1010,55 @@ class SentenceCreate(BaseModel):
 
 
 @app.get("/api/sentences", tags=["API - Sentences"])
-async def get_sentences():
+async def get_sentences(db: DBSession = Depends(get_db)):
     """Get all practice sentences"""
-    return sentences_db
+    sentences = db.query(DBSentence).order_by(DBSentence.id).all()
+    return [{"id": s.id, "chinese": s.chinese, "hint": s.hint} for s in sentences]
 
 
 @app.post("/api/sentences", tags=["API - Sentences"])
-async def create_sentence(sentence: SentenceCreate):
+async def create_sentence(sentence: SentenceCreate, db: DBSession = Depends(get_db)):
     """Add a new practice sentence"""
     # Check for duplicate ID
-    for s in sentences_db:
-        if s["id"] == sentence.id:
-            raise HTTPException(
-                status_code=400, detail=f"Sentence with id {sentence.id} already exists"
-            )
+    existing = db.query(DBSentence).filter(DBSentence.id == sentence.id).first()
+    if existing:
+        raise HTTPException(
+            status_code=400, detail=f"Sentence with id {sentence.id} already exists"
+        )
 
-    new_sentence = {
-        "id": sentence.id,
-        "chinese": sentence.chinese,
-        "hint": sentence.hint,
+    new_sentence = DBSentence(
+        id=sentence.id,
+        chinese=sentence.chinese,
+        hint=sentence.hint,
+    )
+    db.add(new_sentence)
+    db.commit()
+    db.refresh(new_sentence)
+
+    return {
+        "id": new_sentence.id,
+        "chinese": new_sentence.chinese,
+        "hint": new_sentence.hint,
     }
-    sentences_db.insert(0, new_sentence)  # Add to beginning
-    return new_sentence
 
 
 @app.delete("/api/sentences/{sentence_id}", tags=["API - Sentences"])
-async def delete_sentence(sentence_id: int):
+async def delete_sentence(sentence_id: int, db: DBSession = Depends(get_db)):
     """Delete a practice sentence"""
-    for i, s in enumerate(sentences_db):
-        if s["id"] == sentence_id:
-            sentences_db.pop(i)
-            return {"message": f"Sentence {sentence_id} deleted successfully"}
-    raise HTTPException(
-        status_code=404, detail=f"Sentence with id {sentence_id} not found"
-    )
+    sentence = db.query(DBSentence).filter(DBSentence.id == sentence_id).first()
+    if not sentence:
+        raise HTTPException(
+            status_code=404, detail=f"Sentence with id {sentence_id} not found"
+        )
+
+    db.delete(sentence)
+    db.commit()
+    return {"message": f"Sentence {sentence_id} deleted successfully"}
 
 
 # ============== Stats Endpoint ==============
 @app.get("/api/stats", tags=["API - Statistics"])
-async def get_stats():
+async def get_stats(db: DBSession = Depends(get_db)):
     """Get statistics about the data"""
     items = list(items_db.values())
 
@@ -967,9 +1069,14 @@ async def get_stats():
 
     in_stock_count = sum(1 for item in items if item["in_stock"])
 
+    # Get user count from database
+    user_count = db.query(DBUser).count()
+    post_count = db.query(DBPost).count()
+
     return {
         "total_items": len(items),
-        "total_users": len(users_db),
+        "total_users": user_count,
+        "total_posts": post_count,
         "items_in_stock": in_stock_count,
         "items_out_of_stock": len(items) - in_stock_count,
         "items_by_category": category_counts,
