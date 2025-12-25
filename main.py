@@ -475,7 +475,6 @@ async def home_page(request: Request, db: DBSession = Depends(get_db)):
         {
             "request": request,
             "title": "English Speaking Practice",
-            "items": list(items_db.values()),
             "user": user_dict,
         },
     )

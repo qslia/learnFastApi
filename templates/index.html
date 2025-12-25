@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0a0a0f;
             --bg-secondary: #12121a;
             --bg-card: #1a1a24;
             --accent: #00d4aa;
+            --accent-secondary: #6366f1;
             --accent-glow: rgba(0, 212, 170, 0.3);
             --text-primary: #ffffff;
             --text-secondary: #8b8b9e;
@@ -20,16 +21,17 @@
         }
 
         [data-theme="light"] {
-            --bg-primary: #f8fafc;
+            --bg-primary: #faf9f7;
             --bg-secondary: #ffffff;
             --bg-card: #ffffff;
             --accent: #4f46e5;
+            --accent-secondary: #06b6d4;
             --accent-glow: rgba(79, 70, 229, 0.15);
             --text-primary: #1f2937;
             --text-secondary: #6b7280;
             --border: #e5e7eb;
             --gradient-1: rgba(79, 70, 229, 0.05);
-            --gradient-2: rgba(99, 102, 241, 0.05);
+            --gradient-2: rgba(6, 182, 212, 0.05);
         }
 
         * {
@@ -39,7 +41,7 @@
         }
 
         body {
-            font-family: 'Outfit', sans-serif;
+            font-family: 'Outfit', 'Noto Sans SC', sans-serif;
             background: var(--bg-primary);
             color: var(--text-primary);
             min-height: 100vh;
@@ -50,20 +52,31 @@
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 2rem;
         }
 
         header {
             text-align: center;
-            padding: 4rem 0;
+            padding: 4rem 0 3rem;
+        }
+
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
         h1 {
-            font-size: 3.5rem;
+            font-size: 3rem;
             font-weight: 700;
-            background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%);
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -74,6 +87,17 @@
             color: var(--text-secondary);
             font-size: 1.2rem;
             font-weight: 300;
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .subtitle-chinese {
+            font-family: 'Noto Sans SC', sans-serif;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-top: 0.5rem;
+            opacity: 0.8;
         }
 
         nav {
@@ -111,11 +135,59 @@
             gap: 0.5rem;
         }
 
+        /* Hero Section */
+        .hero-section {
+            margin: 3rem 0;
+        }
+
+        .cta-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin-top: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .cta-btn {
+            padding: 1rem 2.5rem;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cta-primary {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+            color: white;
+            border: none;
+        }
+
+        .cta-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px var(--accent-glow);
+        }
+
+        .cta-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 2px solid var(--border);
+        }
+
+        .cta-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Stats Section */
         .hero-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 1.5rem;
-            margin: 3rem 0;
+            margin: 4rem 0;
         }
 
         .stat-card {
@@ -133,8 +205,13 @@
             box-shadow: 0 8px 32px var(--accent-glow);
         }
 
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
         .stat-number {
-            font-size: 3rem;
+            font-size: 2.5rem;
             font-weight: 700;
             color: var(--accent);
         }
@@ -142,120 +219,133 @@
         .stat-label {
             color: var(--text-secondary);
             margin-top: 0.5rem;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
 
+        /* Features Section */
         .section-title {
             font-size: 1.8rem;
             margin: 3rem 0 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
+            text-align: center;
         }
 
-        .section-title::before {
-            content: '';
-            width: 4px;
-            height: 28px;
-            background: var(--accent);
-            border-radius: 2px;
-        }
-
-        .items-grid {
+        .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 1.5rem;
+            margin: 2rem 0;
         }
 
-        .item-card {
+        .feature-card {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 16px;
-            overflow: hidden;
+            padding: 2rem;
             transition: all 0.3s ease;
+            text-align: center;
         }
 
-        .item-card:hover {
+        .feature-card:hover {
             transform: translateY(-4px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+            border-color: var(--accent);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
         }
 
-        .item-image {
-            width: 100%;
-            height: 180px;
-            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%);
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: var(--text-primary);
+        }
+
+        .feature-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Sample Sentences */
+        .sample-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin: 3rem 0;
+        }
+
+        .sample-title {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sample-sentence {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .sample-chinese {
+            font-family: 'Noto Sans SC', sans-serif;
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .sample-hint {
+            color: var(--accent);
+            font-size: 0.95rem;
+            font-style: italic;
+        }
+
+        /* How it Works */
+        .steps-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .step {
+            text-align: center;
+            flex: 1;
+            min-width: 200px;
+            max-width: 250px;
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+            color: white;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--text-secondary);
-            font-size: 3rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 auto 1rem;
         }
 
-        .item-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .item-content {
-            padding: 1.5rem;
-        }
-
-        .item-category {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            background: var(--accent-glow);
-            color: var(--accent);
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.75rem;
-        }
-
-        .item-name {
-            font-size: 1.25rem;
+        .step-title {
             font-weight: 600;
             margin-bottom: 0.5rem;
         }
 
-        .item-description {
+        .step-desc {
             color: var(--text-secondary);
             font-size: 0.9rem;
-            line-height: 1.5;
-            margin-bottom: 1rem;
-        }
-
-        .item-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .item-price {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--accent);
-        }
-
-        .stock-badge {
-            padding: 0.35rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-
-        .in-stock {
-            background: rgba(34, 197, 94, 0.15);
-            color: #22c55e;
-        }
-
-        .out-of-stock {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
         }
 
         footer {
@@ -275,8 +365,20 @@
             h1 {
                 font-size: 2rem;
             }
+            .logo {
+                font-size: 3rem;
+            }
             .container {
                 padding: 1rem;
+            }
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            .cta-btn {
+                width: 100%;
+                max-width: 280px;
+                justify-content: center;
             }
         }
     </style>
@@ -284,8 +386,10 @@
 <body>
     <div class="container">
         <header>
-            <h1>⚡ English Speaking Practice</h1>
-            <p class="subtitle">A modern, fast API with HTML templates and image uploads</p>
+            <div class="logo">📚</div>
+            <h1>English Speaking Practice</h1>
+            <p class="subtitle">Master English through Chinese-to-English translation practice. Build confidence, expand vocabulary, and speak fluently!</p>
+            <p class="subtitle-chinese">通过中译英练习掌握英语口语</p>
             <nav>
                 <a href="/">🏠 Home</a>
                 <a href="/practice">📝 Practice</a>
@@ -304,49 +408,117 @@
             </nav>
         </header>
 
-        <div class="hero-stats">
-            <div class="stat-card">
-                <div class="stat-number">{{ items|length }}</div>
-                <div class="stat-label">Total Items</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">4</div>
-                <div class="stat-label">Categories</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number">∞</div>
-                <div class="stat-label">Possibilities</div>
+        <div class="hero-section">
+            <div class="cta-buttons">
+                <a href="/practice" class="cta-btn cta-primary">
+                    🚀 Start Practicing
+                </a>
+                <a href="/community" class="cta-btn cta-secondary">
+                    👥 Join Community
+                </a>
             </div>
         </div>
 
-        <h2 class="section-title">Featured Items</h2>
-        <div class="items-grid">
-            {% for item in items %}
-            <div class="item-card">
-                <div class="item-image">
-                    {% if item.image_url %}
-                    <img src="{{ item.image_url }}" alt="{{ item.name }}">
-                    {% else %}
-                    📦
-                    {% endif %}
-                </div>
-                <div class="item-content">
-                    <span class="item-category">{{ item.category }}</span>
-                    <h3 class="item-name">{{ item.name }}</h3>
-                    <p class="item-description">{{ item.description or 'No description available' }}</p>
-                    <div class="item-footer">
-                        <span class="item-price">${{ "%.2f"|format(item.price) }}</span>
-                        <span class="stock-badge {{ 'in-stock' if item.in_stock else 'out-of-stock' }}">
-                            {{ 'In Stock' if item.in_stock else 'Out of Stock' }}
-                        </span>
-                    </div>
-                </div>
+        <div class="hero-stats">
+            <div class="stat-card">
+                <div class="stat-icon">📖</div>
+                <div class="stat-number">100+</div>
+                <div class="stat-label">Practice Sentences</div>
             </div>
-            {% endfor %}
+            <div class="stat-card">
+                <div class="stat-icon">🎯</div>
+                <div class="stat-number">Free</div>
+                <div class="stat-label">Forever</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🌍</div>
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Available</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💡</div>
+                <div class="stat-number">Smart</div>
+                <div class="stat-label">Hints System</div>
+            </div>
+        </div>
+
+        <h2 class="section-title">✨ Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🇨🇳 → 🇬🇧</div>
+                <h3 class="feature-title">Chinese to English</h3>
+                <p class="feature-desc">Practice translating Chinese sentences into natural English expressions</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💡</div>
+                <h3 class="feature-title">Smart Hints</h3>
+                <p class="feature-desc">Get helpful hints when you're stuck, without giving away the full answer</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3 class="feature-title">Track Progress</h3>
+                <p class="feature-desc">See your completion rate and review sentences you've practiced</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">➕</div>
+                <h3 class="feature-title">Add Your Own</h3>
+                <p class="feature-desc">Create custom sentences to practice vocabulary you want to learn</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3 class="feature-title">Community</h3>
+                <p class="feature-desc">Share your progress and learn together with other students</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌓</div>
+                <h3 class="feature-title">Dark/Light Mode</h3>
+                <p class="feature-desc">Choose your preferred theme for comfortable practice sessions</p>
+            </div>
+        </div>
+
+        <div class="sample-section">
+            <h3 class="sample-title">📝 Sample Practice Sentences</h3>
+            <div class="sample-sentence">
+                <div class="sample-chinese">中国西南部的天气很特别。</div>
+                <div class="sample-hint">💡 The weather in... is very special/unique.</div>
+            </div>
+            <div class="sample-sentence">
+                <div class="sample-chinese">春天和秋天是最好的季节。</div>
+                <div class="sample-hint">💡 Spring and autumn are...</div>
+            </div>
+            <div class="sample-sentence">
+                <div class="sample-chinese">在这么热的天气里去游泳很凉爽。</div>
+                <div class="sample-hint">💡 It's refreshing/cool to... in such hot weather.</div>
+            </div>
+        </div>
+
+        <h2 class="section-title">🎯 How It Works</h2>
+        <div class="steps-container">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-title">Read Chinese</div>
+                <div class="step-desc">See a Chinese sentence and understand its meaning</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-title">Think & Type</div>
+                <div class="step-desc">Type your English translation in the input box</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-title">Use Hints</div>
+                <div class="step-desc">Click the hint button if you need help</div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-title">Practice Daily</div>
+                <div class="step-desc">Consistent practice leads to fluency!</div>
+            </div>
         </div>
 
         <footer>
-            <p>Built with ❤️ using <a href="https://fastapi.tiangolo.com" target="_blank">FastAPI</a></p>
+            <p>Built with ❤️ for English learners everywhere</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem;">Powered by <a href="https://fastapi.tiangolo.com" target="_blank">FastAPI</a></p>
         </footer>
     </div>
 
