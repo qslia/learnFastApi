@@ -37,11 +37,16 @@ from database import (
     Sentence as DBSentence,
     PracticeRecord as DBPracticeRecord,
     DailyStreak as DBDailyStreak,
+    Payment as DBPayment,
+    SubscriptionTier,
+    PaymentStatus,
+    SUBSCRIPTION_LIMITS,
     get_db,
     create_tables,
     init_demo_data,
 )
 from datetime import date
+from dateutil.relativedelta import relativedelta
 
 # Initialize FastAPI app with metadata
 app = FastAPI(
@@ -1042,6 +1047,28 @@ async def record_practice(
 
     today = date.today()
     
+    # Check daily limit for free users
+    tier = user.current_tier
+    limits = SUBSCRIPTION_LIMITS[tier]
+    daily_limit = limits["daily_sentences"]
+    
+    if daily_limit > 0:  # -1 means unlimited
+        today_count = db.query(DBPracticeRecord).filter(
+            DBPracticeRecord.user_id == user.id,
+            DBPracticeRecord.practice_date == today,
+        ).count()
+        
+        if today_count >= daily_limit:
+            raise HTTPException(
+                status_code=403, 
+                detail={
+                    "message": f"已达到今日练习上限 ({daily_limit}句)，升级会员解锁更多！",
+                    "limit_reached": True,
+                    "daily_limit": daily_limit,
+                    "upgrade_url": "/pricing",
+                }
+            )
+    
     # Check if already recorded today
     existing = db.query(DBPracticeRecord).filter(
         DBPracticeRecord.user_id == user.id,
@@ -1219,6 +1246,377 @@ async def get_stats(db: DBSession = Depends(get_db)):
             round(sum(item["price"] for item in items) / len(items), 2) if items else 0
         ),
     }
+
+
+# ============== Subscription & Payment Endpoints ==============
+
+# Alipay Configuration (set these in environment variables for production)
+ALIPAY_APP_ID = os.getenv("ALIPAY_APP_ID", "your_app_id")
+ALIPAY_PRIVATE_KEY = os.getenv("ALIPAY_PRIVATE_KEY", "")
+ALIPAY_PUBLIC_KEY = os.getenv("ALIPAY_PUBLIC_KEY", "")
+ALIPAY_NOTIFY_URL = os.getenv("ALIPAY_NOTIFY_URL", "http://localhost:8000/api/payment/notify")
+ALIPAY_RETURN_URL = os.getenv("ALIPAY_RETURN_URL", "http://localhost:8000/payment/success")
+
+# Pricing configuration
+PRICING = {
+    "basic_monthly": {"tier": SubscriptionTier.BASIC, "months": 1, "price": 9.9, "name": "基础版月度"},
+    "basic_yearly": {"tier": SubscriptionTier.BASIC, "months": 12, "price": 99, "name": "基础版年度"},
+    "premium_monthly": {"tier": SubscriptionTier.PREMIUM, "months": 1, "price": 29.9, "name": "高级版月度"},
+    "premium_yearly": {"tier": SubscriptionTier.PREMIUM, "months": 12, "price": 299, "name": "高级版年度"},
+    "lifetime": {"tier": SubscriptionTier.LIFETIME, "months": 0, "price": 199, "name": "终身会员"},
+}
+
+
+@app.get("/api/subscription/status", tags=["API - Subscription"])
+async def get_subscription_status(request: Request, db: DBSession = Depends(get_db)):
+    """Get current user's subscription status"""
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Get today's practice count for limit check
+    today = date.today()
+    today_count = db.query(DBPracticeRecord).filter(
+        DBPracticeRecord.user_id == user.id,
+        DBPracticeRecord.practice_date == today,
+    ).count()
+    
+    tier = user.current_tier
+    limits = SUBSCRIPTION_LIMITS[tier]
+    daily_limit = limits["daily_sentences"]
+    
+    return {
+        "tier": tier.value,
+        "tier_name": {
+            "free": "免费版",
+            "basic": "基础版",
+            "premium": "高级版",
+            "lifetime": "终身会员",
+        }.get(tier.value, tier.value),
+        "is_premium": user.is_premium,
+        "lifetime_member": user.lifetime_member,
+        "expires_at": user.subscription_expires_at.isoformat() if user.subscription_expires_at else None,
+        "limits": {
+            "daily_sentences": daily_limit,
+            "today_practiced": today_count,
+            "remaining_today": max(0, daily_limit - today_count) if daily_limit > 0 else -1,
+            "can_practice": daily_limit == -1 or today_count < daily_limit,
+            "history_days": limits["history_days"],
+            "can_add_sentences": limits["can_add_sentences"],
+            "show_ads": limits["show_ads"],
+        },
+    }
+
+
+@app.get("/api/subscription/pricing", tags=["API - Subscription"])
+async def get_pricing():
+    """Get subscription pricing options"""
+    return {
+        "plans": [
+            {
+                "id": "basic_monthly",
+                "name": "基础版",
+                "period": "月度",
+                "price": 9.9,
+                "price_display": "¥9.9/月",
+                "features": ["每日50句练习", "30天历史记录", "添加自定义句子", "无广告"],
+            },
+            {
+                "id": "basic_yearly",
+                "name": "基础版",
+                "period": "年度",
+                "price": 99,
+                "price_display": "¥99/年",
+                "original_price": 118.8,
+                "discount": "省¥19.8",
+                "features": ["每日50句练习", "30天历史记录", "添加自定义句子", "无广告"],
+            },
+            {
+                "id": "premium_monthly",
+                "name": "高级版",
+                "period": "月度",
+                "price": 29.9,
+                "price_display": "¥29.9/月",
+                "features": ["无限练习", "完整历史记录", "添加自定义句子", "无广告", "优先支持"],
+                "recommended": True,
+            },
+            {
+                "id": "premium_yearly",
+                "name": "高级版",
+                "period": "年度",
+                "price": 299,
+                "price_display": "¥299/年",
+                "original_price": 358.8,
+                "discount": "省¥59.8",
+                "features": ["无限练习", "完整历史记录", "添加自定义句子", "无广告", "优先支持"],
+            },
+            {
+                "id": "lifetime",
+                "name": "终身会员",
+                "period": "一次性",
+                "price": 199,
+                "price_display": "¥199",
+                "features": ["永久无限练习", "永久完整记录", "添加自定义句子", "永久无广告", "优先支持"],
+                "best_value": True,
+            },
+        ],
+        "free_limits": {
+            "daily_sentences": 10,
+            "history_days": 7,
+        },
+    }
+
+
+@app.post("/api/payment/create", tags=["API - Payment"])
+async def create_payment(
+    request: Request,
+    plan_id: str = Query(..., description="Plan ID from pricing"),
+    db: DBSession = Depends(get_db),
+):
+    """Create a payment order for subscription"""
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    if plan_id not in PRICING:
+        raise HTTPException(status_code=400, detail="Invalid plan ID")
+    
+    plan = PRICING[plan_id]
+    
+    # Generate unique order ID
+    order_id = f"ESP{datetime.now().strftime('%Y%m%d%H%M%S')}{user.id}{secrets.token_hex(4).upper()}"
+    
+    # Create payment record
+    payment = DBPayment(
+        user_id=user.id,
+        order_id=order_id,
+        subscription_tier=plan["tier"].value,
+        amount=plan["price"],
+        months=plan["months"],
+        status=PaymentStatus.PENDING.value,
+    )
+    db.add(payment)
+    db.commit()
+    
+    # Generate Alipay payment URL
+    # In production, use actual Alipay SDK
+    # For now, return order info for frontend to handle
+    
+    return {
+        "order_id": order_id,
+        "amount": plan["price"],
+        "plan_name": plan["name"],
+        "message": "订单创建成功",
+        # In production, include actual Alipay payment URL:
+        # "payment_url": alipay.create_page_pay(...)
+        "payment_info": {
+            "subject": f"英语口语练习 - {plan['name']}",
+            "out_trade_no": order_id,
+            "total_amount": str(plan["price"]),
+            "product_code": "FAST_INSTANT_TRADE_PAY",
+        },
+    }
+
+
+@app.post("/api/payment/notify", tags=["API - Payment"])
+async def payment_notify(request: Request, db: DBSession = Depends(get_db)):
+    """Alipay async notification callback"""
+    # Get form data from Alipay
+    form_data = await request.form()
+    data = dict(form_data)
+    
+    # In production, verify signature with Alipay SDK
+    # alipay.verify(data, signature)
+    
+    order_id = data.get("out_trade_no")
+    trade_status = data.get("trade_status")
+    alipay_trade_no = data.get("trade_no")
+    
+    if not order_id:
+        return "fail"
+    
+    # Find payment record
+    payment = db.query(DBPayment).filter(DBPayment.order_id == order_id).first()
+    if not payment:
+        return "fail"
+    
+    # Update payment status
+    if trade_status in ["TRADE_SUCCESS", "TRADE_FINISHED"]:
+        payment.status = PaymentStatus.COMPLETED.value
+        payment.alipay_trade_no = alipay_trade_no
+        payment.paid_at = datetime.utcnow()
+        
+        # Update user subscription
+        user = db.query(DBUser).filter(DBUser.id == payment.user_id).first()
+        if user:
+            if payment.months == 0:  # Lifetime
+                user.lifetime_member = True
+                user.subscription_tier = SubscriptionTier.LIFETIME.value
+            else:
+                user.subscription_tier = payment.subscription_tier
+                # Extend or set expiration
+                if user.subscription_expires_at and user.subscription_expires_at > datetime.utcnow():
+                    # Extend existing subscription
+                    user.subscription_expires_at = user.subscription_expires_at + relativedelta(months=payment.months)
+                else:
+                    # New subscription
+                    user.subscription_expires_at = datetime.utcnow() + relativedelta(months=payment.months)
+        
+        db.commit()
+        return "success"
+    
+    return "fail"
+
+
+@app.get("/api/payment/check/{order_id}", tags=["API - Payment"])
+async def check_payment(
+    order_id: str,
+    request: Request,
+    db: DBSession = Depends(get_db),
+):
+    """Check payment status"""
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    payment = db.query(DBPayment).filter(
+        DBPayment.order_id == order_id,
+        DBPayment.user_id == user.id,
+    ).first()
+    
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    return {
+        "order_id": payment.order_id,
+        "status": payment.status,
+        "amount": payment.amount,
+        "paid_at": payment.paid_at.isoformat() if payment.paid_at else None,
+    }
+
+
+# Demo endpoint to simulate successful payment (remove in production!)
+@app.post("/api/payment/demo-complete/{order_id}", tags=["API - Payment"])
+async def demo_complete_payment(
+    order_id: str,
+    request: Request,
+    db: DBSession = Depends(get_db),
+):
+    """[DEMO ONLY] Simulate successful payment - REMOVE IN PRODUCTION"""
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    payment = db.query(DBPayment).filter(
+        DBPayment.order_id == order_id,
+        DBPayment.user_id == user.id,
+    ).first()
+    
+    if not payment:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    
+    if payment.status == PaymentStatus.COMPLETED.value:
+        return {"message": "Payment already completed"}
+    
+    # Complete payment
+    payment.status = PaymentStatus.COMPLETED.value
+    payment.alipay_trade_no = f"DEMO_{secrets.token_hex(8)}"
+    payment.paid_at = datetime.utcnow()
+    
+    # Update user subscription
+    if payment.months == 0:  # Lifetime
+        user.lifetime_member = True
+        user.subscription_tier = SubscriptionTier.LIFETIME.value
+    else:
+        user.subscription_tier = payment.subscription_tier
+        if user.subscription_expires_at and user.subscription_expires_at > datetime.utcnow():
+            user.subscription_expires_at = user.subscription_expires_at + relativedelta(months=payment.months)
+        else:
+            user.subscription_expires_at = datetime.utcnow() + relativedelta(months=payment.months)
+    
+    db.commit()
+    
+    return {
+        "message": "Payment completed successfully (DEMO)",
+        "subscription_tier": user.subscription_tier,
+        "expires_at": user.subscription_expires_at.isoformat() if user.subscription_expires_at else "Lifetime",
+    }
+
+
+# ============== Pricing Page ==============
+@app.get("/pricing", response_class=HTMLResponse, tags=["Pages"])
+async def pricing_page(request: Request, db: DBSession = Depends(get_db)):
+    """Pricing page"""
+    user = get_current_user(request, db)
+    user_dict = None
+    subscription_info = None
+    
+    if user:
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_premium": user.is_premium,
+            "tier": user.current_tier.value,
+        }
+        subscription_info = {
+            "tier": user.current_tier.value,
+            "expires_at": user.subscription_expires_at,
+            "lifetime": user.lifetime_member,
+        }
+    
+    return templates.TemplateResponse(
+        "pricing.html",
+        {
+            "request": request,
+            "title": "升级会员 - Upgrade",
+            "user": user_dict,
+            "subscription": subscription_info,
+        },
+    )
+
+
+@app.get("/payment/success", response_class=HTMLResponse, tags=["Pages"])
+async def payment_success_page(
+    request: Request,
+    out_trade_no: str = Query(None),
+    db: DBSession = Depends(get_db),
+):
+    """Payment success page"""
+    user = get_current_user(request, db)
+    user_dict = None
+    payment_info = None
+    
+    if user:
+        user_dict = {
+            "id": user.id,
+            "username": user.username,
+            "is_premium": user.is_premium,
+            "tier": user.current_tier.value,
+        }
+        
+        if out_trade_no:
+            payment = db.query(DBPayment).filter(
+                DBPayment.order_id == out_trade_no,
+                DBPayment.user_id == user.id,
+            ).first()
+            if payment:
+                payment_info = {
+                    "order_id": payment.order_id,
+                    "status": payment.status,
+                    "amount": payment.amount,
+                }
+    
+    return templates.TemplateResponse(
+        "payment_success.html",
+        {
+            "request": request,
+            "title": "支付结果",
+            "user": user_dict,
+            "payment": payment_info,
+        },
+    )
 
 
 if __name__ == "__main__":

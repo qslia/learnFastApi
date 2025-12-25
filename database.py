@@ -14,11 +14,66 @@ from sqlalchemy import (
     ForeignKey,
     Date,
     UniqueConstraint,
+    Float,
+    Enum as SQLEnum,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime, date
+from enum import Enum
 import os
+
+
+# ============== Subscription Enums ==============
+class SubscriptionTier(str, Enum):
+    FREE = "free"
+    BASIC = "basic"      # ¥9.9/month
+    PREMIUM = "premium"  # ¥29.9/month
+    LIFETIME = "lifetime"  # ¥199 one-time
+
+
+class PaymentStatus(str, Enum):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    REFUNDED = "refunded"
+
+
+# Subscription limits
+SUBSCRIPTION_LIMITS = {
+    SubscriptionTier.FREE: {
+        "daily_sentences": 10,
+        "history_days": 7,
+        "can_add_sentences": False,
+        "show_ads": True,
+        "price": 0,
+        "price_display": "免费",
+    },
+    SubscriptionTier.BASIC: {
+        "daily_sentences": 50,
+        "history_days": 30,
+        "can_add_sentences": True,
+        "show_ads": False,
+        "price": 9.9,
+        "price_display": "¥9.9/月",
+    },
+    SubscriptionTier.PREMIUM: {
+        "daily_sentences": -1,  # Unlimited
+        "history_days": 365,
+        "can_add_sentences": True,
+        "show_ads": False,
+        "price": 29.9,
+        "price_display": "¥29.9/月",
+    },
+    SubscriptionTier.LIFETIME: {
+        "daily_sentences": -1,  # Unlimited
+        "history_days": -1,  # Unlimited
+        "can_add_sentences": True,
+        "show_ads": False,
+        "price": 199,
+        "price_display": "¥199 终身",
+    },
+}
 
 # Database URL - PostgreSQL for production
 # IMPORTANT: Using psycopg3 driver (postgresql+psycopg) to fix Windows Unicode issues
@@ -74,6 +129,11 @@ class User(Base):
     full_name = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Subscription fields
+    subscription_tier = Column(String(20), default=SubscriptionTier.FREE.value)
+    subscription_expires_at = Column(DateTime, nullable=True)
+    lifetime_member = Column(Boolean, default=False)
 
     # Relationships
     posts = relationship(
@@ -82,6 +142,34 @@ class User(Base):
     sessions = relationship(
         "Session", back_populates="user", cascade="all, delete-orphan"
     )
+    payments = relationship(
+        "Payment", back_populates="user", cascade="all, delete-orphan"
+    )
+    
+    @property
+    def is_premium(self):
+        """Check if user has active premium subscription"""
+        if self.lifetime_member:
+            return True
+        if self.subscription_tier == SubscriptionTier.FREE.value:
+            return False
+        if self.subscription_expires_at and self.subscription_expires_at > datetime.utcnow():
+            return True
+        return False
+    
+    @property
+    def current_tier(self):
+        """Get current subscription tier"""
+        if self.lifetime_member:
+            return SubscriptionTier.LIFETIME
+        if self.subscription_expires_at and self.subscription_expires_at > datetime.utcnow():
+            return SubscriptionTier(self.subscription_tier)
+        return SubscriptionTier.FREE
+    
+    @property
+    def tier_limits(self):
+        """Get limits for current tier"""
+        return SUBSCRIPTION_LIMITS[self.current_tier]
 
 
 class Session(Base):
@@ -180,11 +268,75 @@ class DailyStreak(Base):
     user = relationship("User", backref="streak")
 
 
+class Payment(Base):
+    """Payment records for subscriptions"""
+
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Payment details
+    order_id = Column(String(64), unique=True, index=True, nullable=False)
+    alipay_trade_no = Column(String(64), nullable=True)  # Alipay transaction ID
+    
+    # Subscription info
+    subscription_tier = Column(String(20), nullable=False)
+    amount = Column(Float, nullable=False)  # Amount in CNY
+    months = Column(Integer, default=1)  # Number of months (0 for lifetime)
+    
+    # Status
+    status = Column(String(20), default=PaymentStatus.PENDING.value)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    paid_at = Column(DateTime, nullable=True)
+    
+    # Relationships
+    user = relationship("User", back_populates="payments")
+
+
 # ============== Database Utilities ==============
+
+
+def migrate_database():
+    """Run database migrations to add new columns to existing tables"""
+    from sqlalchemy import text, inspect
+    
+    inspector = inspect(engine)
+    
+    # Check if users table exists and has the new columns
+    if 'users' in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('users')]
+        
+        with engine.connect() as conn:
+            # Add subscription columns if they don't exist
+            if 'subscription_tier' not in columns:
+                print("📦 Adding subscription_tier column...")
+                conn.execute(text("ALTER TABLE users ADD COLUMN subscription_tier VARCHAR(20) DEFAULT 'free'"))
+            
+            if 'subscription_expires_at' not in columns:
+                print("📦 Adding subscription_expires_at column...")
+                conn.execute(text("ALTER TABLE users ADD COLUMN subscription_expires_at TIMESTAMP"))
+            
+            if 'lifetime_member' not in columns:
+                print("📦 Adding lifetime_member column...")
+                conn.execute(text("ALTER TABLE users ADD COLUMN lifetime_member BOOLEAN DEFAULT FALSE"))
+            
+            conn.commit()
+    
+    print("✅ Database migration check completed!")
 
 
 def create_tables():
     """Create all database tables"""
+    # First run migrations for existing tables
+    try:
+        migrate_database()
+    except Exception as e:
+        print(f"⚠️ Migration warning: {e}")
+    
+    # Then create any new tables
     Base.metadata.create_all(bind=engine)
 
 

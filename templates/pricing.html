@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --accent: #00d4aa;
+            --accent-secondary: #6366f1;
+            --accent-glow: rgba(0, 212, 170, 0.3);
+            --text-primary: #ffffff;
+            --text-secondary: #8b8b9e;
+            --border: #2a2a3a;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --gold: linear-gradient(135deg, #f59e0b 0%, #fbbf24 50%, #f59e0b 100%);
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --accent: #4f46e5;
+            --accent-secondary: #06b6d4;
+            --accent-glow: rgba(79, 70, 229, 0.15);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            padding: 2rem 0 3rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: var(--gold);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        nav {
+            display: flex;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        nav a, nav button {
+            padding: 0.5rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        nav a:hover, nav button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Current Plan Banner */
+        .current-plan-banner {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: white;
+        }
+
+        .current-plan-banner.free {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .current-plan-banner h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .current-plan-banner p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        /* Pricing Grid */
+        .pricing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .pricing-card {
+            background: var(--bg-card);
+            border: 2px solid var(--border);
+            border-radius: 20px;
+            padding: 2rem;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .pricing-card.recommended {
+            border-color: var(--accent);
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .pricing-card.best-value {
+            border-color: #f59e0b;
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.3);
+        }
+
+        .badge {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge.recommended {
+            background: var(--accent);
+            color: white;
+        }
+
+        .badge.best-value {
+            background: var(--gold);
+            color: #1a1a24;
+        }
+
+        .plan-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .plan-period {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+
+        .plan-price {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .pricing-card.best-value .plan-price {
+            background: var(--gold);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .original-price {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+            font-size: 1rem;
+            margin-right: 0.5rem;
+        }
+
+        .discount-badge {
+            display: inline-block;
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .features-list {
+            list-style: none;
+            margin: 1.5rem 0;
+        }
+
+        .features-list li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .features-list li::before {
+            content: "✓";
+            color: var(--success);
+            font-weight: bold;
+        }
+
+        .buy-btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .buy-btn.primary {
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+            color: white;
+        }
+
+        .buy-btn.gold {
+            background: var(--gold);
+            color: #1a1a24;
+        }
+
+        .buy-btn.secondary {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .buy-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px var(--accent-glow);
+        }
+
+        .buy-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Free Plan Comparison */
+        .free-comparison {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            margin: 3rem 0;
+        }
+
+        .free-comparison h3 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            font-size: 1.3rem;
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comparison-table th {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .comparison-table td:first-child {
+            text-align: left;
+            color: var(--text-secondary);
+        }
+
+        .check {
+            color: var(--success);
+            font-size: 1.2rem;
+        }
+
+        .cross {
+            color: var(--text-secondary);
+            opacity: 0.5;
+        }
+
+        /* Payment Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .modal h2 {
+            margin-bottom: 1rem;
+        }
+
+        .modal-price {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+        }
+
+        .qr-placeholder {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .qr-placeholder img {
+            max-width: 200px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .modal-actions button {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .modal-actions .cancel-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .modal-actions .confirm-btn {
+            background: var(--accent);
+            border: none;
+            color: white;
+        }
+
+        footer {
+            text-align: center;
+            padding: 3rem 0;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            .container {
+                padding: 1rem;
+            }
+            .pricing-card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>👑 升级会员</h1>
+            <p class="subtitle">解锁无限练习，提升英语水平</p>
+            <nav>
+                <a href="/">🏠 首页</a>
+                <a href="/practice">📝 练习</a>
+                <a href="/community">💬 社区</a>
+                {% if user %}
+                <a href="/profile">👤 {{ user.username }}
+                    {% if user.is_premium %}
+                    <span style="color: #f59e0b;">👑</span>
+                    {% endif %}
+                </a>
+                <a href="/logout">🚪 退出</a>
+                {% else %}
+                <a href="/login">🔐 登录</a>
+                <a href="/signup">✨ 注册</a>
+                {% endif %}
+            </nav>
+        </header>
+
+        {% if user %}
+        <!-- Current Plan Banner -->
+        <div class="current-plan-banner {% if not user.is_premium %}free{% endif %}">
+            {% if user.is_premium %}
+            <h3>🎉 您当前是 {{ {"basic": "基础版", "premium": "高级版", "lifetime": "终身会员"}.get(user.tier, user.tier) }} 会员</h3>
+            {% if subscription and subscription.expires_at %}
+            <p>有效期至: {{ subscription.expires_at.strftime('%Y年%m月%d日') }}</p>
+            {% elif subscription and subscription.lifetime %}
+            <p>永久有效 ✨</p>
+            {% endif %}
+            {% else %}
+            <h3>📢 您当前是免费版用户</h3>
+            <p>每日限制10句练习，升级解锁更多功能！</p>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Pricing Cards -->
+        <div class="pricing-grid">
+            <!-- Basic Monthly -->
+            <div class="pricing-card">
+                <div class="plan-name">基础版</div>
+                <div class="plan-period">月度订阅</div>
+                <div class="plan-price">¥9.9<span style="font-size: 1rem; color: var(--text-secondary);">/月</span></div>
+                <ul class="features-list">
+                    <li>每日50句练习</li>
+                    <li>30天历史记录</li>
+                    <li>添加自定义句子</li>
+                    <li>无广告体验</li>
+                </ul>
+                <button class="buy-btn secondary" onclick="createPayment('basic_monthly')" {% if not user %}disabled{% endif %}>
+                    {% if user %}立即订阅{% else %}请先登录{% endif %}
+                </button>
+            </div>
+
+            <!-- Premium Monthly -->
+            <div class="pricing-card recommended">
+                <div class="badge recommended">推荐</div>
+                <div class="plan-name">高级版</div>
+                <div class="plan-period">月度订阅</div>
+                <div class="plan-price">¥29.9<span style="font-size: 1rem; color: var(--text-secondary);">/月</span></div>
+                <ul class="features-list">
+                    <li>无限练习</li>
+                    <li>完整历史记录</li>
+                    <li>添加自定义句子</li>
+                    <li>无广告体验</li>
+                    <li>优先客服支持</li>
+                </ul>
+                <button class="buy-btn primary" onclick="createPayment('premium_monthly')" {% if not user %}disabled{% endif %}>
+                    {% if user %}立即订阅{% else %}请先登录{% endif %}
+                </button>
+            </div>
+
+            <!-- Lifetime -->
+            <div class="pricing-card best-value">
+                <div class="badge best-value">超值</div>
+                <div class="plan-name">终身会员</div>
+                <div class="plan-period">一次付费，永久使用</div>
+                <div class="plan-price">¥199</div>
+                <ul class="features-list">
+                    <li>永久无限练习</li>
+                    <li>永久完整记录</li>
+                    <li>添加自定义句子</li>
+                    <li>永久无广告</li>
+                    <li>优先客服支持</li>
+                    <li>未来新功能免费</li>
+                </ul>
+                <button class="buy-btn gold" onclick="createPayment('lifetime')" {% if not user %}disabled{% endif %}>
+                    {% if user %}立即购买{% else %}请先登录{% endif %}
+                </button>
+            </div>
+        </div>
+
+        <!-- Yearly Options -->
+        <div style="text-align: center; margin: 2rem 0;">
+            <p style="color: var(--text-secondary); margin-bottom: 1rem;">💡 年度订阅更优惠</p>
+            <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+                <button class="buy-btn secondary" style="width: auto; padding: 0.75rem 1.5rem;" onclick="createPayment('basic_yearly')" {% if not user %}disabled{% endif %}>
+                    基础版年度 <span class="discount-badge">省¥19.8</span> ¥99/年
+                </button>
+                <button class="buy-btn secondary" style="width: auto; padding: 0.75rem 1.5rem;" onclick="createPayment('premium_yearly')" {% if not user %}disabled{% endif %}>
+                    高级版年度 <span class="discount-badge">省¥59.8</span> ¥299/年
+                </button>
+            </div>
+        </div>
+
+        <!-- Comparison Table -->
+        <div class="free-comparison">
+            <h3>📊 版本对比</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>功能</th>
+                        <th>免费版</th>
+                        <th>基础版</th>
+                        <th>高级版/终身</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>每日练习</td>
+                        <td>10句</td>
+                        <td>50句</td>
+                        <td>无限</td>
+                    </tr>
+                    <tr>
+                        <td>历史记录</td>
+                        <td>7天</td>
+                        <td>30天</td>
+                        <td>永久</td>
+                    </tr>
+                    <tr>
+                        <td>添加句子</td>
+                        <td><span class="cross">✕</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td>无广告</td>
+                        <td><span class="cross">✕</span></td>
+                        <td><span class="check">✓</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                    <tr>
+                        <td>优先支持</td>
+                        <td><span class="cross">✕</span></td>
+                        <td><span class="cross">✕</span></td>
+                        <td><span class="check">✓</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            <p>如有问题，请联系客服</p>
+            <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
+                支付完成后，会员权益立即生效
+            </p>
+        </footer>
+    </div>
+
+    <!-- Payment Modal -->
+    <div class="modal-overlay" id="payment-modal">
+        <div class="modal">
+            <h2>📱 支付宝支付</h2>
+            <p id="modal-plan-name" style="color: var(--text-secondary); margin-bottom: 0.5rem;">高级版月度</p>
+            <div class="modal-price" id="modal-price">¥29.9</div>
+            
+            <div class="qr-placeholder">
+                <p style="color: #666; margin-bottom: 1rem;">请使用支付宝扫码支付</p>
+                <div style="width: 180px; height: 180px; background: #f0f0f0; margin: 0 auto; display: flex; align-items: center; justify-content: center; border-radius: 8px;">
+                    <span style="color: #999;">二维码加载中...</span>
+                </div>
+                <p style="color: #999; font-size: 0.85rem; margin-top: 1rem;">订单号: <span id="modal-order-id">-</span></p>
+            </div>
+
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closePaymentModal()">取消</button>
+                <button class="confirm-btn" onclick="checkPayment()">我已支付</button>
+            </div>
+            
+            <!-- Demo button for testing -->
+            <button style="margin-top: 1rem; padding: 0.5rem 1rem; background: #f59e0b; border: none; border-radius: 6px; color: white; cursor: pointer; font-size: 0.85rem;" onclick="demoPayment()">
+                🧪 模拟支付 (测试用)
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let currentOrderId = null;
+
+        async function createPayment(planId) {
+            try {
+                const response = await fetch(`/api/payment/create?plan_id=${planId}`, {
+                    method: 'POST',
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    alert(error.detail || '创建订单失败');
+                    return;
+                }
+                
+                const data = await response.json();
+                currentOrderId = data.order_id;
+                
+                // Update modal
+                document.getElementById('modal-plan-name').textContent = data.plan_name;
+                document.getElementById('modal-price').textContent = `¥${data.amount}`;
+                document.getElementById('modal-order-id').textContent = data.order_id;
+                
+                // Show modal
+                document.getElementById('payment-modal').classList.add('active');
+                
+                // In production, redirect to Alipay or show QR code
+                // window.location.href = data.payment_url;
+                
+            } catch (err) {
+                alert('创建订单失败: ' + err.message);
+            }
+        }
+
+        function closePaymentModal() {
+            document.getElementById('payment-modal').classList.remove('active');
+            currentOrderId = null;
+        }
+
+        async function checkPayment() {
+            if (!currentOrderId) return;
+            
+            try {
+                const response = await fetch(`/api/payment/check/${currentOrderId}`);
+                const data = await response.json();
+                
+                if (data.status === 'completed') {
+                    alert('🎉 支付成功！会员权益已生效');
+                    window.location.reload();
+                } else {
+                    alert('支付尚未完成，请完成支付后再点击此按钮');
+                }
+            } catch (err) {
+                alert('查询支付状态失败');
+            }
+        }
+
+        // Demo payment for testing
+        async function demoPayment() {
+            if (!currentOrderId) return;
+            
+            try {
+                const response = await fetch(`/api/payment/demo-complete/${currentOrderId}`, {
+                    method: 'POST',
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    alert('🎉 ' + data.message);
+                    window.location.reload();
+                } else {
+                    const error = await response.json();
+                    alert(error.detail || '模拟支付失败');
+                }
+            } catch (err) {
+                alert('模拟支付失败: ' + err.message);
+            }
+        }
+
+        // Close modal on overlay click
+        document.getElementById('payment-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closePaymentModal();
+            }
+        });
+    </script>
+</body>
+</html>
+

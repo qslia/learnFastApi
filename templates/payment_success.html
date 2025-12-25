@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --accent: #00d4aa;
+            --text-primary: #ffffff;
+            --text-secondary: #8b8b9e;
+            --border: #2a2a3a;
+            --success: #10b981;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 500px;
+        }
+
+        .success-icon {
+            font-size: 5rem;
+            margin-bottom: 1.5rem;
+            animation: bounce 0.6s ease;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--success);
+        }
+
+        .message {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .order-info {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .order-info p {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .order-info p:last-child {
+            border-bottom: none;
+        }
+
+        .order-info .label {
+            color: var(--text-secondary);
+        }
+
+        .order-info .value {
+            font-weight: 500;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: var(--accent);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 212, 170, 0.3);
+        }
+
+        .secondary-link {
+            display: block;
+            margin-top: 1rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .secondary-link:hover {
+            color: var(--accent);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% if payment and payment.status == 'completed' %}
+        <div class="success-icon">🎉</div>
+        <h1>支付成功！</h1>
+        <p class="message">感谢您的支持！您的会员权益已经生效，现在可以享受无限练习了。</p>
+        
+        <div class="order-info">
+            <p>
+                <span class="label">订单号</span>
+                <span class="value">{{ payment.order_id }}</span>
+            </p>
+            <p>
+                <span class="label">支付金额</span>
+                <span class="value">¥{{ payment.amount }}</span>
+            </p>
+            <p>
+                <span class="label">状态</span>
+                <span class="value" style="color: var(--success);">已完成</span>
+            </p>
+        </div>
+        
+        <a href="/practice" class="btn">🚀 开始练习</a>
+        <a href="/" class="secondary-link">返回首页</a>
+        
+        {% elif payment and payment.status == 'pending' %}
+        <div class="success-icon">⏳</div>
+        <h1>等待支付确认</h1>
+        <p class="message">我们正在确认您的支付状态，请稍候...</p>
+        
+        <div class="order-info">
+            <p>
+                <span class="label">订单号</span>
+                <span class="value">{{ payment.order_id }}</span>
+            </p>
+            <p>
+                <span class="label">支付金额</span>
+                <span class="value">¥{{ payment.amount }}</span>
+            </p>
+        </div>
+        
+        <a href="/pricing" class="btn">返回会员页</a>
+        
+        {% else %}
+        <div class="success-icon">❓</div>
+        <h1>未找到订单</h1>
+        <p class="message">无法找到相关订单信息，请确认支付是否完成。</p>
+        
+        <a href="/pricing" class="btn">查看会员</a>
+        <a href="/" class="secondary-link">返回首页</a>
+        {% endif %}
+    </div>
+</body>
+</html>
+
