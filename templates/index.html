@@ -291,6 +291,13 @@
                 <a href="/practice">📝 Practice</a>
                 <a href="/gallery">🖼️ Gallery</a>
                 <a href="/docs">📚 API Docs</a>
+                {% if user %}
+                <a href="/profile">👤 {{ user.username }}</a>
+                <a href="/logout">🚪 Logout</a>
+                {% else %}
+                <a href="/login">🔐 Login</a>
+                <a href="/signup">✨ Sign Up</a>
+                {% endif %}
                 <button class="theme-toggle" onclick="toggleTheme()">
                     <span id="theme-icon">🌙</span>
                     <span id="theme-text">Dark</span>

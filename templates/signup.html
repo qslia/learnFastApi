@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - English Speaking Practice</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --accent: #00d4aa;
+            --accent-light: #34d9b3;
+            --accent-glow: rgba(0, 212, 170, 0.3);
+            --text-primary: #ffffff;
+            --text-secondary: #8b8b9e;
+            --border: #2a2a3a;
+            --error: #ef4444;
+            --success: #10b981;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --accent: #4f46e5;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(79, 70, 229, 0.15);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: 
+                radial-gradient(ellipse at top, rgba(0, 212, 170, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            padding: 2rem 0;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 420px;
+            padding: 2rem;
+        }
+
+        .auth-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .auth-logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .auth-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .alert {
+            padding: 0.875rem 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+        }
+
+        .alert-error {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            color: var(--text-primary);
+            background: var(--bg-primary);
+            transition: all 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-glow);
+        }
+
+        .form-input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.6;
+        }
+
+        .form-hint {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 0.35rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.875rem 1.5rem;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            border: none;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px var(--accent-glow);
+        }
+
+        .auth-footer {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .auth-footer p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .auth-footer a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 1.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        .theme-toggle {
+            position: fixed;
+            top: 1.5rem;
+            right: 1.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .password-strength {
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .password-strength-bar {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s ease;
+        }
+
+        .strength-weak { width: 33%; background: var(--error); }
+        .strength-medium { width: 66%; background: #f59e0b; }
+        .strength-strong { width: 100%; background: var(--success); }
+    </style>
+</head>
+<body>
+    <button class="theme-toggle" onclick="toggleTheme()">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-text">Dark</span>
+    </button>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-logo">✨</div>
+                <h1 class="auth-title">Create Account</h1>
+                <p class="auth-subtitle">Start your English learning journey</p>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-error">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form action="/signup" method="POST">
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <input 
+                        type="text" 
+                        id="username" 
+                        name="username" 
+                        class="form-input" 
+                        placeholder="Choose a username"
+                        required
+                        minlength="3"
+                        maxlength="50"
+                        autocomplete="username"
+                    >
+                    <p class="form-hint">3-50 characters, letters and numbers only</p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        class="form-input" 
+                        placeholder="Enter your email"
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="full_name">Full Name (Optional)</label>
+                    <input 
+                        type="text" 
+                        id="full_name" 
+                        name="full_name" 
+                        class="form-input" 
+                        placeholder="Enter your full name"
+                        autocomplete="name"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        class="form-input" 
+                        placeholder="Create a password"
+                        required
+                        minlength="6"
+                        autocomplete="new-password"
+                        oninput="checkPasswordStrength(this.value)"
+                    >
+                    <div class="password-strength">
+                        <div class="password-strength-bar" id="password-strength-bar"></div>
+                    </div>
+                    <p class="form-hint">At least 6 characters</p>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    Create Account
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                <p>Already have an account? <a href="/login">Sign in</a></p>
+            </div>
+        </div>
+
+        <a href="/" class="back-link">← Back to Home</a>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            
+            if (theme === 'dark') {
+                icon.textContent = '🌙';
+                text.textContent = 'Dark';
+            } else {
+                icon.textContent = '☀️';
+                text.textContent = 'Light';
+            }
+        }
+
+        function checkPasswordStrength(password) {
+            const bar = document.getElementById('password-strength-bar');
+            bar.className = 'password-strength-bar';
+            
+            if (password.length === 0) {
+                bar.style.width = '0%';
+                return;
+            }
+            
+            let strength = 0;
+            if (password.length >= 6) strength++;
+            if (password.length >= 10) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+            
+            if (strength <= 2) {
+                bar.classList.add('strength-weak');
+            } else if (strength <= 4) {
+                bar.classList.add('strength-medium');
+            } else {
+                bar.classList.add('strength-strong');
+            }
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+    </script>
+</body>
+</html>
+

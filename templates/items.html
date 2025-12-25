@@ -272,10 +272,18 @@
         <header>
             <div class="header-top">
                 <a href="/" class="back-link">← Back to Home</a>
-                <button class="theme-toggle" onclick="toggleTheme()">
-                    <span id="theme-icon">🌙</span>
-                    <span id="theme-text">Dark</span>
-                </button>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    {% if user %}
+                    <a href="/profile" class="theme-toggle" style="text-decoration: none;">👤 {{ user.username }}</a>
+                    <a href="/logout" class="theme-toggle" style="text-decoration: none;">🚪 Logout</a>
+                    {% else %}
+                    <a href="/login" class="theme-toggle" style="text-decoration: none;">🔐 Login</a>
+                    {% endif %}
+                    <button class="theme-toggle" onclick="toggleTheme()">
+                        <span id="theme-icon">🌙</span>
+                        <span id="theme-text">Dark</span>
+                    </button>
+                </div>
             </div>
             <h1>📦 {{ title }}</h1>
         </header>

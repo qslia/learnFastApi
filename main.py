@@ -1,15 +1,28 @@
-from fastapi import FastAPI, HTTPException, Query, Path, File, UploadFile, Request
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Query,
+    Path,
+    File,
+    UploadFile,
+    Request,
+    Depends,
+    Response,
+    Form,
+)
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field, EmailStr
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 import os
 import shutil
 import uuid
+import hashlib
+import secrets
 
 # Initialize FastAPI app with metadata
 app = FastAPI(
@@ -39,6 +52,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ============== Secret Key for Sessions ==============
+SECRET_KEY = secrets.token_hex(32)
 
 
 # ============== Enums ==============
@@ -81,7 +97,7 @@ class Item(ItemBase):
         from_attributes = True
 
 
-class User(BaseModel):
+class UserModel(BaseModel):
     id: int
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
@@ -103,6 +119,28 @@ class ImageUploadResponse(BaseModel):
     filename: str
     url: str
     size: int
+
+
+# ============== Auth Models ==============
+class UserSignup(BaseModel):
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=6)
+    full_name: Optional[str] = None
+
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+
+class AuthUser(BaseModel):
+    id: int
+    username: str
+    email: str
+    full_name: Optional[str] = None
+    is_active: bool = True
+    created_at: datetime
 
 
 # ============== In-Memory Database ==============
@@ -139,8 +177,25 @@ users_db: dict[int, dict] = {
     }
 }
 
+# Auth users database (with passwords)
+auth_users_db: dict[str, dict] = {
+    "demo": {
+        "id": 1,
+        "username": "demo",
+        "email": "demo@example.com",
+        "password_hash": hashlib.sha256("demo123".encode()).hexdigest(),
+        "full_name": "Demo User",
+        "is_active": True,
+        "created_at": datetime.now(),
+    }
+}
+
+# Session storage (in production, use Redis or database)
+sessions_db: dict[str, dict] = {}
+
 item_id_counter = 3
 user_id_counter = 2
+auth_user_id_counter = 2
 
 # ============== Practice Sentences Database ==============
 sentences_db: list[dict] = [
@@ -187,16 +242,223 @@ sentences_db: list[dict] = [
 ]
 
 
+# ============== Auth Helper Functions ==============
+def hash_password(password: str) -> str:
+    """Hash a password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
+def verify_password(password: str, password_hash: str) -> bool:
+    """Verify a password against its hash"""
+    return hash_password(password) == password_hash
+
+
+def create_session(user_id: int, username: str) -> str:
+    """Create a new session and return the session token"""
+    session_token = secrets.token_urlsafe(32)
+    sessions_db[session_token] = {
+        "user_id": user_id,
+        "username": username,
+        "created_at": datetime.now(),
+        "expires_at": datetime.now() + timedelta(days=7),
+    }
+    return session_token
+
+
+def get_session(session_token: str) -> Optional[dict]:
+    """Get session data from token"""
+    if not session_token:
+        return None
+    session = sessions_db.get(session_token)
+    if session and session["expires_at"] > datetime.now():
+        return session
+    elif session:
+        # Session expired, remove it
+        del sessions_db[session_token]
+    return None
+
+
+def get_current_user(request: Request) -> Optional[dict]:
+    """Get current user from session cookie"""
+    session_token = request.cookies.get("session_token")
+    if not session_token:
+        return None
+    session = get_session(session_token)
+    if not session:
+        return None
+    username = session.get("username")
+    return auth_users_db.get(username)
+
+
+# ============== Auth Page Endpoints ==============
+@app.get("/login", response_class=HTMLResponse, tags=["Auth Pages"])
+async def login_page(
+    request: Request, error: Optional[str] = None, message: Optional[str] = None
+):
+    """Login page"""
+    user = get_current_user(request)
+    if user:
+        return RedirectResponse(url="/", status_code=302)
+
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "title": "Login",
+            "error": error,
+            "message": message,
+        },
+    )
+
+
+@app.get("/signup", response_class=HTMLResponse, tags=["Auth Pages"])
+async def signup_page(request: Request, error: Optional[str] = None):
+    """Signup page"""
+    user = get_current_user(request)
+    if user:
+        return RedirectResponse(url="/", status_code=302)
+
+    return templates.TemplateResponse(
+        "signup.html",
+        {
+            "request": request,
+            "title": "Sign Up",
+            "error": error,
+        },
+    )
+
+
+@app.post("/login", tags=["Auth"])
+async def login(
+    request: Request,
+    response: Response,
+    username: str = Form(...),
+    password: str = Form(...),
+):
+    """Process login form"""
+    user = auth_users_db.get(username)
+
+    if not user or not verify_password(password, user["password_hash"]):
+        return RedirectResponse(
+            url="/login?error=Invalid username or password",
+            status_code=302,
+        )
+
+    if not user["is_active"]:
+        return RedirectResponse(
+            url="/login?error=Account is disabled",
+            status_code=302,
+        )
+
+    # Create session
+    session_token = create_session(user["id"], username)
+
+    # Redirect to home with session cookie
+    response = RedirectResponse(url="/", status_code=302)
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        max_age=7 * 24 * 60 * 60,  # 7 days
+        samesite="lax",
+    )
+    return response
+
+
+@app.post("/signup", tags=["Auth"])
+async def signup(
+    request: Request,
+    username: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    full_name: str = Form(None),
+):
+    """Process signup form"""
+    global auth_user_id_counter
+
+    # Check if username exists
+    if username in auth_users_db:
+        return RedirectResponse(
+            url="/signup?error=Username already exists",
+            status_code=302,
+        )
+
+    # Check if email exists
+    for user in auth_users_db.values():
+        if user["email"] == email:
+            return RedirectResponse(
+                url="/signup?error=Email already registered",
+                status_code=302,
+            )
+
+    # Validate password length
+    if len(password) < 6:
+        return RedirectResponse(
+            url="/signup?error=Password must be at least 6 characters",
+            status_code=302,
+        )
+
+    # Create new user
+    auth_users_db[username] = {
+        "id": auth_user_id_counter,
+        "username": username,
+        "email": email,
+        "password_hash": hash_password(password),
+        "full_name": full_name or username,
+        "is_active": True,
+        "created_at": datetime.now(),
+    }
+    auth_user_id_counter += 1
+
+    return RedirectResponse(
+        url="/login?message=Account created successfully! Please login.",
+        status_code=302,
+    )
+
+
+@app.get("/logout", tags=["Auth"])
+async def logout(request: Request):
+    """Logout and clear session"""
+    session_token = request.cookies.get("session_token")
+    if session_token and session_token in sessions_db:
+        del sessions_db[session_token]
+
+    response = RedirectResponse(
+        url="/login?message=Logged out successfully", status_code=302
+    )
+    response.delete_cookie("session_token")
+    return response
+
+
+@app.get("/profile", response_class=HTMLResponse, tags=["Auth Pages"])
+async def profile_page(request: Request):
+    """User profile page"""
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+
+    return templates.TemplateResponse(
+        "profile.html",
+        {
+            "request": request,
+            "title": "Profile",
+            "user": user,
+        },
+    )
+
+
 # ============== HTML Page Endpoints ==============
 @app.get("/", response_class=HTMLResponse, tags=["Pages"])
 async def home_page(request: Request):
     """Home page with HTML template"""
+    user = get_current_user(request)
     return templates.TemplateResponse(
         "index.html",
         {
             "request": request,
             "title": "English Speaking Practice",
             "items": list(items_db.values()),
+            "user": user,
         },
     )
 
@@ -204,6 +466,7 @@ async def home_page(request: Request):
 @app.get("/gallery", response_class=HTMLResponse, tags=["Pages"])
 async def gallery_page(request: Request):
     """Image gallery page"""
+    user = get_current_user(request)
     # Get all uploaded images
     upload_dir = "static/uploads"
     images = []
@@ -220,6 +483,7 @@ async def gallery_page(request: Request):
             "request": request,
             "title": "Image Gallery",
             "images": images,
+            "user": user,
         },
     )
 
@@ -227,6 +491,7 @@ async def gallery_page(request: Request):
 @app.get("/items-page", response_class=HTMLResponse, tags=["Pages"])
 async def items_page(request: Request, category: Optional[str] = None):
     """Items listing page with optional category filter"""
+    user = get_current_user(request)
     items = list(items_db.values())
     if category:
         items = [item for item in items if item["category"] == category]
@@ -239,6 +504,7 @@ async def items_page(request: Request, category: Optional[str] = None):
             "items": items,
             "categories": [c.value for c in ItemCategory],
             "selected_category": category,
+            "user": user,
         },
     )
 
@@ -246,12 +512,14 @@ async def items_page(request: Request, category: Optional[str] = None):
 @app.get("/practice", response_class=HTMLResponse, tags=["Pages"])
 async def practice_page(request: Request):
     """English speaking practice page"""
+    user = get_current_user(request)
     return templates.TemplateResponse(
         "practice.html",
         {
             "request": request,
             "title": "English Speaking Practice",
             "sentences": sentences_db,
+            "user": user,
         },
     )
 
@@ -348,6 +616,21 @@ async def health_check():
     return {"message": "OK"}
 
 
+# ============== Auth API Endpoints ==============
+@app.get("/api/auth/me", tags=["API - Auth"])
+async def get_current_user_api(request: Request):
+    """Get current logged in user"""
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {
+        "id": user["id"],
+        "username": user["username"],
+        "email": user["email"],
+        "full_name": user["full_name"],
+    }
+
+
 # ============== Item API Endpoints ==============
 @app.get("/api/items", response_model=list[Item], tags=["API - Items"])
 async def get_items(
@@ -425,7 +708,7 @@ async def delete_item(item_id: int = Path(..., gt=0)):
 
 
 # ============== User API Endpoints ==============
-@app.get("/api/users", response_model=list[User], tags=["API - Users"])
+@app.get("/api/users", response_model=list[UserModel], tags=["API - Users"])
 async def get_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(10, ge=1, le=100),
@@ -440,7 +723,7 @@ async def get_users(
     return users[skip : skip + limit]
 
 
-@app.get("/api/users/{user_id}", response_model=User, tags=["API - Users"])
+@app.get("/api/users/{user_id}", response_model=UserModel, tags=["API - Users"])
 async def get_user(
     user_id: int = Path(..., gt=0, description="The ID of the user to retrieve")
 ):
@@ -450,7 +733,7 @@ async def get_user(
     return users_db[user_id]
 
 
-@app.post("/api/users", response_model=User, status_code=201, tags=["API - Users"])
+@app.post("/api/users", response_model=UserModel, status_code=201, tags=["API - Users"])
 async def create_user(user: UserCreate):
     """Create a new user"""
     global user_id_counter

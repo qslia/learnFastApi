@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }} - English Speaking Practice</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: #1a1a24;
+            --accent: #00d4aa;
+            --accent-light: #34d9b3;
+            --accent-glow: rgba(0, 212, 170, 0.3);
+            --text-primary: #ffffff;
+            --text-secondary: #8b8b9e;
+            --border: #2a2a3a;
+            --error: #ef4444;
+            --success: #10b981;
+        }
+
+        [data-theme="light"] {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --accent: #4f46e5;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(79, 70, 229, 0.15);
+            --text-primary: #1f2937;
+            --text-secondary: #6b7280;
+            --border: #e5e7eb;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(ellipse at top, rgba(0, 212, 170, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom right, rgba(99, 102, 241, 0.08) 0%, transparent 50%);
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 2rem;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        .back-link:hover {
+            color: var(--accent);
+        }
+
+        .theme-toggle {
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .profile-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            background: var(--accent-glow);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+
+        .profile-info h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .profile-info .username {
+            color: var(--accent);
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .profile-info .email {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .profile-details {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: 12px;
+        }
+
+        .detail-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .detail-value {
+            font-weight: 500;
+        }
+
+        .status-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .status-inactive {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+        }
+
+        .profile-actions {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 0.875rem 1.5rem;
+            border-radius: 10px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-secondary {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--error);
+        }
+
+        .btn-danger:hover {
+            background: var(--error);
+            color: white;
+        }
+
+        @media (max-width: 640px) {
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profile-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <a href="/" class="back-link">← Back to Home</a>
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <span id="theme-icon">🌙</span>
+                    <span id="theme-text">Dark</span>
+                </button>
+            </div>
+        </header>
+
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    👤
+                </div>
+                <div class="profile-info">
+                    <h1>{{ user.full_name or user.username }}</h1>
+                    <p class="username">@{{ user.username }}</p>
+                    <p class="email">{{ user.email }}</p>
+                </div>
+            </div>
+
+            <div class="profile-details">
+                <div class="detail-item">
+                    <span class="detail-label">User ID</span>
+                    <span class="detail-value">#{{ user.id }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Account Status</span>
+                    <span class="status-badge {{ 'status-active' if user.is_active else 'status-inactive' }}">
+                        {{ 'Active' if user.is_active else 'Inactive' }}
+                    </span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Member Since</span>
+                    <span class="detail-value">{{ user.created_at.strftime('%B %d, %Y') if user.created_at else 'N/A' }}</span>
+                </div>
+            </div>
+
+            <div class="profile-actions">
+                <a href="/" class="btn btn-secondary">
+                    🏠 Go to Home
+                </a>
+                <a href="/logout" class="btn btn-danger">
+                    🚪 Logout
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            html.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButton(newTheme);
+        }
+
+        function updateThemeButton(theme) {
+            const icon = document.getElementById('theme-icon');
+            const text = document.getElementById('theme-text');
+            
+            if (theme === 'dark') {
+                icon.textContent = '🌙';
+                text.textContent = 'Dark';
+            } else {
+                icon.textContent = '☀️';
+                text.textContent = 'Light';
+            }
+        }
+
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeButton(savedTheme);
+    </script>
+</body>
+</html>
+
