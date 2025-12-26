@@ -536,20 +536,33 @@ async def practice_page(request: Request, db: DBSession = Depends(get_db)):
             "email": user.email,
             "full_name": user.full_name,
             "is_premium": user.is_premium,
-            "tier_limits": limits["daily_sentences"] if limits["daily_sentences"] > 0 else 999999,
+            "tier_limits": (
+                limits["daily_sentences"] if limits["daily_sentences"] > 0 else 999999
+            ),
         }
 
-    # Get sentences from database
-    sentences = db.query(DBSentence).order_by(DBSentence.id).all()
+    # Get sentences from database - only user's own sentences
+    if user:
+        sentences = (
+            db.query(DBSentence)
+            .filter(DBSentence.user_id == user.id)
+            .order_by(DBSentence.id)
+            .all()
+        )
+    else:
+        # Non-logged-in users see no sentences
+        sentences = []
+
     sentences_list = [
         {
-            "id": s.id, 
-            "chinese": s.chinese, 
+            "id": s.id,
+            "chinese": s.chinese,
             "english": s.english,
             "hint": s.hint,
             "category": s.category or "general",
             "difficulty": s.difficulty or 1,
-        } for s in sentences
+        }
+        for s in sentences
     ]
 
     return templates.TemplateResponse(
@@ -988,53 +1001,64 @@ async def search_items(
 
 # ============== Sentence API Endpoints ==============
 class SentenceCreate(BaseModel):
-    id: int
     chinese: str = Field(..., min_length=1)
     hint: Optional[str] = None
 
 
 @app.get("/api/sentences", tags=["API - Sentences"])
 async def get_sentences(
+    request: Request,
     category: Optional[str] = None,
     difficulty: Optional[int] = None,
-    db: DBSession = Depends(get_db)
+    db: DBSession = Depends(get_db),
 ):
-    """Get all practice sentences with optional filtering"""
-    query = db.query(DBSentence)
-    
+    """Get user's practice sentences with optional filtering"""
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(
+            status_code=401, detail="You must be logged in to view sentences"
+        )
+
+    # Build query - only return sentences owned by this user
+    query = db.query(DBSentence).filter(DBSentence.user_id == user.id)
+
     if category:
         query = query.filter(DBSentence.category == category)
     if difficulty:
         query = query.filter(DBSentence.difficulty == difficulty)
-    
+
     sentences = query.order_by(DBSentence.id).all()
     return [
         {
-            "id": s.id, 
-            "chinese": s.chinese, 
+            "id": s.id,
+            "chinese": s.chinese,
             "english": s.english,
             "hint": s.hint,
             "category": s.category or "general",
             "difficulty": s.difficulty or 1,
-        } 
+        }
         for s in sentences
     ]
 
 
 @app.post("/api/sentences", tags=["API - Sentences"])
-async def create_sentence(sentence: SentenceCreate, db: DBSession = Depends(get_db)):
+async def create_sentence(
+    request: Request, sentence: SentenceCreate, db: DBSession = Depends(get_db)
+):
     """Add a new practice sentence"""
-    # Check for duplicate ID
-    existing = db.query(DBSentence).filter(DBSentence.id == sentence.id).first()
-    if existing:
+    user = get_current_user(request, db)
+    if not user:
         raise HTTPException(
-            status_code=400, detail=f"Sentence with id {sentence.id} already exists"
+            status_code=401, detail="You must be logged in to add sentences"
         )
 
+    # Create new sentence (ID will be auto-generated)
     new_sentence = DBSentence(
-        id=sentence.id,
+        user_id=user.id,  # Associate with current user
         chinese=sentence.chinese,
         hint=sentence.hint,
+        difficulty=1,  # Default difficulty
+        category="general",  # Default category
     )
     db.add(new_sentence)
     db.commit()
@@ -1048,12 +1072,26 @@ async def create_sentence(sentence: SentenceCreate, db: DBSession = Depends(get_
 
 
 @app.delete("/api/sentences/{sentence_id}", tags=["API - Sentences"])
-async def delete_sentence(sentence_id: int, db: DBSession = Depends(get_db)):
-    """Delete a practice sentence"""
-    sentence = db.query(DBSentence).filter(DBSentence.id == sentence_id).first()
+async def delete_sentence(
+    request: Request, sentence_id: int, db: DBSession = Depends(get_db)
+):
+    """Delete a practice sentence (only user's own sentences)"""
+    user = get_current_user(request, db)
+    if not user:
+        raise HTTPException(
+            status_code=401, detail="You must be logged in to delete sentences"
+        )
+
+    # Only allow deleting own sentences
+    sentence = (
+        db.query(DBSentence)
+        .filter(DBSentence.id == sentence_id, DBSentence.user_id == user.id)
+        .first()
+    )
     if not sentence:
         raise HTTPException(
-            status_code=404, detail=f"Sentence with id {sentence_id} not found"
+            status_code=404,
+            detail=f"Sentence with id {sentence_id} not found or you don't have permission",
         )
 
     db.delete(sentence)
@@ -1077,45 +1115,55 @@ async def record_practice(
     """Record that a user practiced a sentence today with their answer"""
     user = get_current_user(request, db)
     if not user:
-        raise HTTPException(status_code=401, detail="You must be logged in to track practice")
+        raise HTTPException(
+            status_code=401, detail="You must be logged in to track practice"
+        )
 
     today = date.today()
-    
+
     # Check daily limit for free users
     tier = user.current_tier
     limits = SUBSCRIPTION_LIMITS[tier]
     daily_limit = limits["daily_sentences"]
-    
+
     # Count unique sentences practiced today
-    today_count = db.query(DBPracticeRecord).filter(
-        DBPracticeRecord.user_id == user.id,
-        DBPracticeRecord.practice_date == today,
-    ).count()
-    
+    today_count = (
+        db.query(DBPracticeRecord)
+        .filter(
+            DBPracticeRecord.user_id == user.id,
+            DBPracticeRecord.practice_date == today,
+        )
+        .count()
+    )
+
     if daily_limit > 0:  # -1 means unlimited
         if today_count >= daily_limit:
             raise HTTPException(
-                status_code=429, 
+                status_code=429,
                 detail={
                     "message": f"Daily limit reached ({daily_limit} sentences). Upgrade for more!",
                     "limit_reached": True,
                     "daily_limit": daily_limit,
                     "upgrade_url": "/pricing",
-                }
+                },
             )
-    
+
     # Check if already recorded today for this sentence
-    existing = db.query(DBPracticeRecord).filter(
-        DBPracticeRecord.user_id == user.id,
-        DBPracticeRecord.sentence_id == record.sentence_id,
-        DBPracticeRecord.practice_date == today,
-    ).first()
-    
+    existing = (
+        db.query(DBPracticeRecord)
+        .filter(
+            DBPracticeRecord.user_id == user.id,
+            DBPracticeRecord.sentence_id == record.sentence_id,
+            DBPracticeRecord.practice_date == today,
+        )
+        .first()
+    )
+
     if existing:
         # Update existing record
         existing.user_answer = record.user_answer
         existing.practice_count = (existing.practice_count or 1) + 1
-        
+
         # Update mastery based on correctness
         if record.is_correct:
             existing.mastery_level = min((existing.mastery_level or 0) + 1, 5)
@@ -1123,21 +1171,26 @@ async def record_practice(
                 existing.is_mastered = True
         else:
             existing.mastery_level = max((existing.mastery_level or 0) - 1, 0)
-        
+
         db.commit()
-        
+
         return {
             "message": "Practice updated",
             "date": str(today),
             "today_count": today_count,
-            "total_practiced": db.query(DBDailyStreak).filter(
-                DBDailyStreak.user_id == user.id
-            ).first().total_sentences_practiced if db.query(DBDailyStreak).filter(
-                DBDailyStreak.user_id == user.id
-            ).first() else 0,
+            "total_practiced": (
+                db.query(DBDailyStreak)
+                .filter(DBDailyStreak.user_id == user.id)
+                .first()
+                .total_sentences_practiced
+                if db.query(DBDailyStreak)
+                .filter(DBDailyStreak.user_id == user.id)
+                .first()
+                else 0
+            ),
             "mastery_level": existing.mastery_level,
         }
-    
+
     # Create new practice record
     new_record = DBPracticeRecord(
         user_id=user.id,
@@ -1149,20 +1202,20 @@ async def record_practice(
         is_mastered=False,
     )
     db.add(new_record)
-    
+
     # Update or create streak
     streak = db.query(DBDailyStreak).filter(DBDailyStreak.user_id == user.id).first()
     if not streak:
         streak = DBDailyStreak(user_id=user.id)
         db.add(streak)
-    
+
     # Update streak statistics
     streak.total_sentences_practiced += 1
-    
+
     # Check if this is a new day of practice
     if streak.last_practice_date != today:
         streak.total_practice_days += 1
-        
+
         # Update streak
         if streak.last_practice_date:
             days_diff = (today - streak.last_practice_date).days
@@ -1174,15 +1227,15 @@ async def record_practice(
                 streak.current_streak = 1
         else:
             streak.current_streak = 1
-        
+
         # Update longest streak
         if streak.current_streak > streak.longest_streak:
             streak.longest_streak = streak.current_streak
-        
+
         streak.last_practice_date = today
-    
+
     db.commit()
-    
+
     return {
         "message": "Practice recorded",
         "date": str(today),
@@ -1200,55 +1253,76 @@ async def get_practice_stats(
     """Get user's practice statistics"""
     user = get_current_user(request, db)
     if not user:
-        raise HTTPException(status_code=401, detail="You must be logged in to view stats")
+        raise HTTPException(
+            status_code=401, detail="You must be logged in to view stats"
+        )
 
     today = date.today()
-    
+
     # Get streak info
     streak = db.query(DBDailyStreak).filter(DBDailyStreak.user_id == user.id).first()
-    
+
     # Get today's practice count
-    today_count = db.query(DBPracticeRecord).filter(
-        DBPracticeRecord.user_id == user.id,
-        DBPracticeRecord.practice_date == today,
-    ).count()
-    
+    today_count = (
+        db.query(DBPracticeRecord)
+        .filter(
+            DBPracticeRecord.user_id == user.id,
+            DBPracticeRecord.practice_date == today,
+        )
+        .count()
+    )
+
     # Get practiced sentence IDs for today
-    today_practiced = db.query(DBPracticeRecord.sentence_id).filter(
-        DBPracticeRecord.user_id == user.id,
-        DBPracticeRecord.practice_date == today,
-    ).all()
+    today_practiced = (
+        db.query(DBPracticeRecord.sentence_id)
+        .filter(
+            DBPracticeRecord.user_id == user.id,
+            DBPracticeRecord.practice_date == today,
+        )
+        .all()
+    )
     today_sentence_ids = [r[0] for r in today_practiced]
-    
+
     # Get mastered count
-    mastered_count = db.query(DBPracticeRecord).filter(
-        DBPracticeRecord.user_id == user.id,
-        DBPracticeRecord.is_mastered == True,
-    ).count()
-    
+    mastered_count = (
+        db.query(DBPracticeRecord)
+        .filter(
+            DBPracticeRecord.user_id == user.id,
+            DBPracticeRecord.is_mastered == True,
+        )
+        .count()
+    )
+
     # Get total sentences
     total_sentences = db.query(DBSentence).count()
-    
+
     # Get daily limit
     tier = user.current_tier
     limits = SUBSCRIPTION_LIMITS[tier]
     daily_limit = limits["daily_sentences"]
-    
+
     # Get practice history for last 7 days
     from datetime import timedelta
+
     history = []
     for i in range(6, -1, -1):
         day = today - timedelta(days=i)
-        count = db.query(DBPracticeRecord).filter(
-            DBPracticeRecord.user_id == user.id,
-            DBPracticeRecord.practice_date == day,
-        ).count()
-        history.append({
-            "date": str(day),
-            "day_name": day.strftime("%a"),
-            "count": count,
-        })
-    
+        count = (
+            db.query(DBPracticeRecord)
+            .filter(
+                DBPracticeRecord.user_id == user.id,
+                DBPracticeRecord.practice_date == day,
+            )
+            .count()
+        )
+        history.append(
+            {
+                "date": str(day),
+                "day_name": day.strftime("%a"),
+                "count": count,
+            }
+        )
+
     return {
         "today_date": str(today),
         "today_count": today_count,
@@ -1274,31 +1348,45 @@ async def get_practice_history(
     """Get user's recent practice history with sentence details"""
     user = get_current_user(request, db)
     if not user:
-        raise HTTPException(status_code=401, detail="You must be logged in to view history")
+        raise HTTPException(
+            status_code=401, detail="You must be logged in to view history"
+        )
 
     # Get recent practice records with sentence details
-    records = db.query(DBPracticeRecord).filter(
-        DBPracticeRecord.user_id == user.id,
-    ).order_by(DBPracticeRecord.updated_at.desc()).limit(limit).all()
-    
+    records = (
+        db.query(DBPracticeRecord)
+        .filter(
+            DBPracticeRecord.user_id == user.id,
+        )
+        .order_by(DBPracticeRecord.updated_at.desc())
+        .limit(limit)
+        .all()
+    )
+
     # Build response with sentence info
     history = []
     for record in records:
-        sentence = db.query(DBSentence).filter(DBSentence.id == record.sentence_id).first()
-        history.append({
-            "id": record.id,
-            "sentence_id": record.sentence_id,
-            "chinese": sentence.chinese if sentence else "Unknown",
-            "english": sentence.english if sentence else "",
-            "user_answer": record.user_answer,
-            "mastery_level": record.mastery_level or 0,
-            "is_mastered": record.is_mastered or False,
-            "is_bookmarked": record.is_bookmarked or False,
-            "practice_count": record.practice_count or 1,
-            "practice_date": str(record.practice_date),
-            "updated_at": record.updated_at.isoformat() if record.updated_at else None,
-        })
-    
+        sentence = (
+            db.query(DBSentence).filter(DBSentence.id == record.sentence_id).first()
+        )
+        history.append(
+            {
+                "id": record.id,
+                "sentence_id": record.sentence_id,
+                "chinese": sentence.chinese if sentence else "Unknown",
+                "english": sentence.english if sentence else "",
+                "user_answer": record.user_answer,
+                "mastery_level": record.mastery_level or 0,
+                "is_mastered": record.is_mastered or False,
+                "is_bookmarked": record.is_bookmarked or False,
+                "practice_count": record.practice_count or 1,
+                "practice_date": str(record.practice_date),
+                "updated_at": (
+                    record.updated_at.isoformat() if record.updated_at else None
+                ),
+            }
+        )
+
     return history
 
 
@@ -1338,16 +1426,45 @@ async def get_stats(db: DBSession = Depends(get_db)):
 ALIPAY_APP_ID = os.getenv("ALIPAY_APP_ID", "your_app_id")
 ALIPAY_PRIVATE_KEY = os.getenv("ALIPAY_PRIVATE_KEY", "")
 ALIPAY_PUBLIC_KEY = os.getenv("ALIPAY_PUBLIC_KEY", "")
-ALIPAY_NOTIFY_URL = os.getenv("ALIPAY_NOTIFY_URL", "http://localhost:8000/api/payment/notify")
-ALIPAY_RETURN_URL = os.getenv("ALIPAY_RETURN_URL", "http://localhost:8000/payment/success")
+ALIPAY_NOTIFY_URL = os.getenv(
+    "ALIPAY_NOTIFY_URL", "http://localhost:8000/api/payment/notify"
+)
+ALIPAY_RETURN_URL = os.getenv(
+    "ALIPAY_RETURN_URL", "http://localhost:8000/payment/success"
+)
 
 # Pricing configuration
 PRICING = {
-    "basic_monthly": {"tier": SubscriptionTier.BASIC, "months": 1, "price": 9.9, "name": "基础版月度"},
-    "basic_yearly": {"tier": SubscriptionTier.BASIC, "months": 12, "price": 99, "name": "基础版年度"},
-    "premium_monthly": {"tier": SubscriptionTier.PREMIUM, "months": 1, "price": 29.9, "name": "高级版月度"},
-    "premium_yearly": {"tier": SubscriptionTier.PREMIUM, "months": 12, "price": 299, "name": "高级版年度"},
-    "lifetime": {"tier": SubscriptionTier.LIFETIME, "months": 0, "price": 199, "name": "终身会员"},
+    "basic_monthly": {
+        "tier": SubscriptionTier.BASIC,
+        "months": 1,
+        "price": 9.9,
+        "name": "基础版月度",
+    },
+    "basic_yearly": {
+        "tier": SubscriptionTier.BASIC,
+        "months": 12,
+        "price": 99,
+        "name": "基础版年度",
+    },
+    "premium_monthly": {
+        "tier": SubscriptionTier.PREMIUM,
+        "months": 1,
+        "price": 29.9,
+        "name": "高级版月度",
+    },
+    "premium_yearly": {
+        "tier": SubscriptionTier.PREMIUM,
+        "months": 12,
+        "price": 299,
+        "name": "高级版年度",
+    },
+    "lifetime": {
+        "tier": SubscriptionTier.LIFETIME,
+        "months": 0,
+        "price": 199,
+        "name": "终身会员",
+    },
 }
 
 
@@ -1357,18 +1474,22 @@ async def get_subscription_status(request: Request, db: DBSession = Depends(get_
     user = get_current_user(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     # Get today's practice count for limit check
     today = date.today()
-    today_count = db.query(DBPracticeRecord).filter(
-        DBPracticeRecord.user_id == user.id,
-        DBPracticeRecord.practice_date == today,
-    ).count()
-    
+    today_count = (
+        db.query(DBPracticeRecord)
+        .filter(
+            DBPracticeRecord.user_id == user.id,
+            DBPracticeRecord.practice_date == today,
+        )
+        .count()
+    )
+
     tier = user.current_tier
     limits = SUBSCRIPTION_LIMITS[tier]
     daily_limit = limits["daily_sentences"]
-    
+
     return {
         "tier": tier.value,
         "tier_name": {
@@ -1379,11 +1500,17 @@ async def get_subscription_status(request: Request, db: DBSession = Depends(get_
         }.get(tier.value, tier.value),
         "is_premium": user.is_premium,
         "lifetime_member": user.lifetime_member,
-        "expires_at": user.subscription_expires_at.isoformat() if user.subscription_expires_at else None,
+        "expires_at": (
+            user.subscription_expires_at.isoformat()
+            if user.subscription_expires_at
+            else None
+        ),
         "limits": {
             "daily_sentences": daily_limit,
             "today_practiced": today_count,
-            "remaining_today": max(0, daily_limit - today_count) if daily_limit > 0 else -1,
+            "remaining_today": (
+                max(0, daily_limit - today_count) if daily_limit > 0 else -1
+            ),
             "can_practice": daily_limit == -1 or today_count < daily_limit,
             "history_days": limits["history_days"],
             "can_add_sentences": limits["can_add_sentences"],
@@ -1403,7 +1530,12 @@ async def get_pricing():
                 "period": "月度",
                 "price": 9.9,
                 "price_display": "¥9.9/月",
-                "features": ["每日50句练习", "30天历史记录", "添加自定义句子", "无广告"],
+                "features": [
+                    "每日50句练习",
+                    "30天历史记录",
+                    "添加自定义句子",
+                    "无广告",
+                ],
             },
             {
                 "id": "basic_yearly",
@@ -1413,7 +1545,12 @@ async def get_pricing():
                 "price_display": "¥99/年",
                 "original_price": 118.8,
                 "discount": "省¥19.8",
-                "features": ["每日50句练习", "30天历史记录", "添加自定义句子", "无广告"],
+                "features": [
+                    "每日50句练习",
+                    "30天历史记录",
+                    "添加自定义句子",
+                    "无广告",
+                ],
             },
             {
                 "id": "premium_monthly",
@@ -1421,7 +1558,13 @@ async def get_pricing():
                 "period": "月度",
                 "price": 29.9,
                 "price_display": "¥29.9/月",
-                "features": ["无限练习", "完整历史记录", "添加自定义句子", "无广告", "优先支持"],
+                "features": [
+                    "无限练习",
+                    "完整历史记录",
+                    "添加自定义句子",
+                    "无广告",
+                    "优先支持",
+                ],
                 "recommended": True,
             },
             {
@@ -1432,7 +1575,13 @@ async def get_pricing():
                 "price_display": "¥299/年",
                 "original_price": 358.8,
                 "discount": "省¥59.8",
-                "features": ["无限练习", "完整历史记录", "添加自定义句子", "无广告", "优先支持"],
+                "features": [
+                    "无限练习",
+                    "完整历史记录",
+                    "添加自定义句子",
+                    "无广告",
+                    "优先支持",
+                ],
             },
             {
                 "id": "lifetime",
@@ -1440,7 +1589,13 @@ async def get_pricing():
                 "period": "一次性",
                 "price": 199,
                 "price_display": "¥199",
-                "features": ["永久无限练习", "永久完整记录", "添加自定义句子", "永久无广告", "优先支持"],
+                "features": [
+                    "永久无限练习",
+                    "永久完整记录",
+                    "添加自定义句子",
+                    "永久无广告",
+                    "优先支持",
+                ],
                 "best_value": True,
             },
         ],
@@ -1461,15 +1616,15 @@ async def create_payment(
     user = get_current_user(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
+
     if plan_id not in PRICING:
         raise HTTPException(status_code=400, detail="Invalid plan ID")
-    
+
     plan = PRICING[plan_id]
-    
+
     # Generate unique order ID
     order_id = f"ESP{datetime.now().strftime('%Y%m%d%H%M%S')}{user.id}{secrets.token_hex(4).upper()}"
-    
+
     # Create payment record
     payment = DBPayment(
         user_id=user.id,
@@ -1481,11 +1636,11 @@ async def create_payment(
     )
     db.add(payment)
     db.commit()
-    
+
     # Generate Alipay payment URL
     # In production, use actual Alipay SDK
     # For now, return order info for frontend to handle
-    
+
     return {
         "order_id": order_id,
         "amount": plan["price"],
@@ -1508,28 +1663,28 @@ async def payment_notify(request: Request, db: DBSession = Depends(get_db)):
     # Get form data from Alipay
     form_data = await request.form()
     data = dict(form_data)
-    
+
     # In production, verify signature with Alipay SDK
     # alipay.verify(data, signature)
-    
+
     order_id = data.get("out_trade_no")
     trade_status = data.get("trade_status")
     alipay_trade_no = data.get("trade_no")
-    
+
     if not order_id:
         return "fail"
-    
+
     # Find payment record
     payment = db.query(DBPayment).filter(DBPayment.order_id == order_id).first()
     if not payment:
         return "fail"
-    
+
     # Update payment status
     if trade_status in ["TRADE_SUCCESS", "TRADE_FINISHED"]:
         payment.status = PaymentStatus.COMPLETED.value
         payment.alipay_trade_no = alipay_trade_no
         payment.paid_at = datetime.utcnow()
-        
+
         # Update user subscription
         user = db.query(DBUser).filter(DBUser.id == payment.user_id).first()
         if user:
@@ -1539,16 +1694,24 @@ async def payment_notify(request: Request, db: DBSession = Depends(get_db)):
             else:
                 user.subscription_tier = payment.subscription_tier
                 # Extend or set expiration
-                if user.subscription_expires_at and user.subscription_expires_at > datetime.utcnow():
+                if (
+                    user.subscription_expires_at
+                    and user.subscription_expires_at > datetime.utcnow()
+                ):
                     # Extend existing subscription
-                    user.subscription_expires_at = user.subscription_expires_at + relativedelta(months=payment.months)
+                    user.subscription_expires_at = (
+                        user.subscription_expires_at
+                        + relativedelta(months=payment.months)
+                    )
                 else:
                     # New subscription
-                    user.subscription_expires_at = datetime.utcnow() + relativedelta(months=payment.months)
-        
+                    user.subscription_expires_at = datetime.utcnow() + relativedelta(
+                        months=payment.months
+                    )
+
         db.commit()
         return "success"
-    
+
     return "fail"
 
 
@@ -1562,15 +1725,19 @@ async def check_payment(
     user = get_current_user(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    payment = db.query(DBPayment).filter(
-        DBPayment.order_id == order_id,
-        DBPayment.user_id == user.id,
-    ).first()
-    
+
+    payment = (
+        db.query(DBPayment)
+        .filter(
+            DBPayment.order_id == order_id,
+            DBPayment.user_id == user.id,
+        )
+        .first()
+    )
+
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
-    
+
     return {
         "order_id": payment.order_id,
         "status": payment.status,
@@ -1590,40 +1757,55 @@ async def demo_complete_payment(
     user = get_current_user(request, db)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    payment = db.query(DBPayment).filter(
-        DBPayment.order_id == order_id,
-        DBPayment.user_id == user.id,
-    ).first()
-    
+
+    payment = (
+        db.query(DBPayment)
+        .filter(
+            DBPayment.order_id == order_id,
+            DBPayment.user_id == user.id,
+        )
+        .first()
+    )
+
     if not payment:
         raise HTTPException(status_code=404, detail="Payment not found")
-    
+
     if payment.status == PaymentStatus.COMPLETED.value:
         return {"message": "Payment already completed"}
-    
+
     # Complete payment
     payment.status = PaymentStatus.COMPLETED.value
     payment.alipay_trade_no = f"DEMO_{secrets.token_hex(8)}"
     payment.paid_at = datetime.utcnow()
-    
+
     # Update user subscription
     if payment.months == 0:  # Lifetime
         user.lifetime_member = True
         user.subscription_tier = SubscriptionTier.LIFETIME.value
     else:
         user.subscription_tier = payment.subscription_tier
-        if user.subscription_expires_at and user.subscription_expires_at > datetime.utcnow():
-            user.subscription_expires_at = user.subscription_expires_at + relativedelta(months=payment.months)
+        if (
+            user.subscription_expires_at
+            and user.subscription_expires_at > datetime.utcnow()
+        ):
+            user.subscription_expires_at = user.subscription_expires_at + relativedelta(
+                months=payment.months
+            )
         else:
-            user.subscription_expires_at = datetime.utcnow() + relativedelta(months=payment.months)
-    
+            user.subscription_expires_at = datetime.utcnow() + relativedelta(
+                months=payment.months
+            )
+
     db.commit()
-    
+
     return {
         "message": "Payment completed successfully (DEMO)",
         "subscription_tier": user.subscription_tier,
-        "expires_at": user.subscription_expires_at.isoformat() if user.subscription_expires_at else "Lifetime",
+        "expires_at": (
+            user.subscription_expires_at.isoformat()
+            if user.subscription_expires_at
+            else "Lifetime"
+        ),
     }
 
 
@@ -1634,7 +1816,7 @@ async def pricing_page(request: Request, db: DBSession = Depends(get_db)):
     user = get_current_user(request, db)
     user_dict = None
     subscription_info = None
-    
+
     if user:
         user_dict = {
             "id": user.id,
@@ -1649,7 +1831,7 @@ async def pricing_page(request: Request, db: DBSession = Depends(get_db)):
             "expires_at": user.subscription_expires_at,
             "lifetime": user.lifetime_member,
         }
-    
+
     return templates.TemplateResponse(
         "pricing.html",
         {
@@ -1671,7 +1853,7 @@ async def payment_success_page(
     user = get_current_user(request, db)
     user_dict = None
     payment_info = None
-    
+
     if user:
         user_dict = {
             "id": user.id,
@@ -1679,19 +1861,23 @@ async def payment_success_page(
             "is_premium": user.is_premium,
             "tier": user.current_tier.value,
         }
-        
+
         if out_trade_no:
-            payment = db.query(DBPayment).filter(
-                DBPayment.order_id == out_trade_no,
-                DBPayment.user_id == user.id,
-            ).first()
+            payment = (
+                db.query(DBPayment)
+                .filter(
+                    DBPayment.order_id == out_trade_no,
+                    DBPayment.user_id == user.id,
+                )
+                .first()
+            )
             if payment:
                 payment_info = {
                     "order_id": payment.order_id,
                     "status": payment.status,
                     "amount": payment.amount,
                 }
-    
+
     return templates.TemplateResponse(
         "payment_success.html",
         {
