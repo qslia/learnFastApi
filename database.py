@@ -128,7 +128,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=default=lambda: datetime.now(timezone.utc))  
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))  
     # Subscription fields
     subscription_tier = Column(String(20), default=SubscriptionTier.FREE.value)
     subscription_expires_at = Column(DateTime, nullable=True)
@@ -157,7 +157,7 @@ class User(Base):
             return False
         if (
             self.subscription_expires_at
-            and self.subscription_expires_at > datetime.utcnow()
+            and self.subscription_expires_at > datetime.now(timezone.utc)
         ):
             return True
         return False
@@ -169,7 +169,7 @@ class User(Base):
             return SubscriptionTier.LIFETIME
         if (
             self.subscription_expires_at
-            and self.subscription_expires_at > datetime.utcnow()
+            and self.subscription_expires_at > datetime.now(timezone.utc)
         ):
             return SubscriptionTier(self.subscription_tier)
         return SubscriptionTier.FREE
@@ -188,7 +188,7 @@ class Session(Base):
     id = Column(Integer, primary_key=True, index=True)
     token = Column(String(255), unique=True, index=True, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
     expires_at = Column(DateTime, nullable=False)
 
     # Relationships
@@ -203,7 +203,7 @@ class Post(Base):
     id = Column(Integer, primary_key=True, index=True)
     author_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
     likes = Column(Integer, default=0)
 
     # Relationships
@@ -221,7 +221,7 @@ class PostLike(Base):
     id = Column(Integer, primary_key=True, index=True)
     post_id = Column(Integer, ForeignKey("posts.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     # Relationships
     post = relationship("Post", back_populates="post_likes")
@@ -241,7 +241,7 @@ class Sentence(Base):
     hint = Column(Text, nullable=True)
     difficulty = Column(Integer, default=1)  # 1=easy, 2=medium, 3=hard
     category = Column(String(50), default="general")  # weather, travel, business, etc.
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
 
     # Relationships
     owner = relationship("User", back_populates="sentences")
@@ -271,8 +271,8 @@ class PracticeRecord(Base):
     is_mastered = Column(Boolean, default=False)
     is_bookmarked = Column(Boolean, default=False)  # User saved for later
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
 
     # Relationships
     user = relationship("User", backref="practice_records")
