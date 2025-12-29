@@ -128,8 +128,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(100), nullable=True)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
+    created_at = Column(DateTime, default=default=lambda: datetime.now(timezone.utc))  
     # Subscription fields
     subscription_tier = Column(String(20), default=SubscriptionTier.FREE.value)
     subscription_expires_at = Column(DateTime, nullable=True)
