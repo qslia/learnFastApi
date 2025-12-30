@@ -19,7 +19,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from enum import Enum
 import os
 
